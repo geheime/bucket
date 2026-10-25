@@ -40,8 +40,12 @@ This builds Bucket from source. It can take a few minutes; say so before you sta
 ## 3. Put the app where macOS can open it
 
 ```sh
+ls -ld ~/Applications/Bucket.app 2>/dev/null   # check first
 mkdir -p ~/Applications && ln -sfn "$(brew --prefix bucket)/Bucket.app" ~/Applications/Bucket.app
 ```
+
+If `~/Applications/Bucket.app` already exists and is a real folder, not a link (an earlier install from the zip),
+`ln` would put the link inside it. Ask the person to quit Bucket and move that copy to the Trash, then run the line.
 
 ## 4. Add the Claude Code skill (if you are Claude Code)
 

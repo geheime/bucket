@@ -1,5 +1,5 @@
-# Formula for the tap geheime/homebrew-tap (file: Formula/bucket.rb). Checked on Homebrew 7.0.9 from a local tap;
-# not yet tested against the published tarball.
+# Formula for the tap geheime/homebrew-tap (file: Formula/bucket.rb). Checked on Homebrew 7.0.9 against the
+# v0.3.0 tarball.
 #
 # Decision: formula that builds from the tag's source tarball, not a cask.
 #   - The standard Homebrew practice for a prebuilt GUI .app is a cask (it installs into /Applications). A formula
@@ -19,8 +19,7 @@ class Bucket < Formula
   desc "Menu bar app that hands your screenshots to your terminal AI agent"
   homepage "https://github.com/geheime/bucket"
   url "https://github.com/geheime/bucket/archive/refs/tags/v0.3.0.tar.gz"
-  # TODO: fill after the tag exists: curl -sL <url> | shasum -a 256
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  sha256 "f6ace7d5c303997595f9bd4d2988829a09217bb4c899272e1785456b64ab2796"
   license "MIT"
   head "https://github.com/geheime/bucket.git", branch: "main"
 
@@ -39,7 +38,8 @@ class Bucket < Formula
            app/"Contents/Info.plist"
     system "/usr/bin/plutil", "-replace", "CFBundleVersion", "-string", version.to_s,
            app/"Contents/Info.plist"
-    system "/usr/bin/codesign", "--force", "--options", "runtime", "--sign", "-", "--identifier", "studio.bast.bucket", app
+    system "/usr/bin/codesign", "--force", "--options", "runtime", "--sign", "-",
+           "--identifier", "studio.bast.bucket", app
 
     prefix.install app
     # `bucket search "<words>" --json` from any shell; the app binary is also the CLI.
@@ -51,6 +51,9 @@ class Bucket < Formula
     <<~EOS
       Link the app so you can open it and give it permissions:
         mkdir -p ~/Applications && ln -sfn #{opt_prefix}/Bucket.app ~/Applications/Bucket.app
+
+      If ~/Applications/Bucket.app is already a real app (from the zip), quit Bucket and
+      move that copy to the Trash first; otherwise ln puts the link inside it.
 
       Then open Bucket, allow Screen Recording in System Settings > Privacy & Security,
       and turn off the macOS Cmd+Shift+4 shortcut (System Settings > Keyboard >

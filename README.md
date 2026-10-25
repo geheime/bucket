@@ -62,7 +62,7 @@ text of the release. The release also has `Bucket-<version>.zip.sha256`, and
 ```sh
 git clone https://github.com/geheime/bucket.git
 cd bucket
-scripts/package.sh 0.2.0     # builds, signs ad-hoc, writes dist/Bucket-0.2.0.zip (needs a clean git tree, or --allow-dirty)
+scripts/package.sh 0.3.0     # builds, signs ad-hoc, writes dist/Bucket-0.3.0.zip (needs a clean git tree, or --allow-dirty)
 ```
 
 or just `swift build -c release` and run `.build/release/Bucket`. No third-party dependencies.
