@@ -3,6 +3,10 @@ import BucketCore
 
 /// Headless entry points. Each one exits the process; none touches the status item or hotkeys.
 enum Cli {
+    static func warn(_ message: String) {
+        FileHandle.standardError.write(Data("bucket: \(message)\n".utf8))
+    }
+
     static func fail(_ message: String) -> Never {
         FileHandle.standardError.write(Data("bucket: \(message)\n".utf8))
         exit(2)
@@ -55,6 +59,7 @@ enum Cli {
             exit(report.errors.isEmpty ? 0 : 1)
         case "ocr":
             guard args.contains("--backfill") else { fail("usage: ocr --backfill") }
+            guard OCRSetting.enabled else { warn(OCRSetting.backfillNotice); exit(0) }
             OCRQueue.shared.backfill(library: library)
             OCRQueue.shared.waitUntilIdle()
             let c = OCRQueue.shared.counts
@@ -113,6 +118,7 @@ enum Cli {
         let query = words.joined(separator: " ")
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { fail(usage) }
         let (results, unread) = Search.run(library: library, query: query, limit: limit)
+        if !OCRSetting.enabled { warn(OCRSetting.searchNotice) }
         if unread > 0 { FileHandle.standardError.write(Data("bucket: \(unread) shots not read yet\n".utf8)) }
         if jsonOut {
             print(Search.json(results))

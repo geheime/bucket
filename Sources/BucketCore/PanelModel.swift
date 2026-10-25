@@ -58,7 +58,8 @@ public enum PanelCopy {
     public static func lastBatch(_ n: Int) -> String { "Last batch · \(n)" }
     public static func reading(_ n: Int) -> String { n == 1 ? "Reading 1 shot…" : "Reading \(n) shots…" }
     /// "Reading N shots…" while the OCR queue has work, "All shots searchable" otherwise.
-    public static func ocr(pending: Int) -> String { pending > 0 ? reading(pending) : allSearchable }
+    public static func ocr(pending: Int, enabled: Bool = true) -> String { !enabled ? readingOff : pending > 0 ? reading(pending) : allSearchable }
+    public static let readingOff = "Text reading is off"
 
     /// `~/Bucket/2026-10-24`: the folder the next capture lands in. Home is abbreviated to `~`.
     public static func savedIn(root: URL, day: String) -> String {

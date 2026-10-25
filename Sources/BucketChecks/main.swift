@@ -736,6 +736,31 @@ do {
     check("backfill: second run finds nothing", OCRQueue.shared.backfill(library: library) == 0)
 }
 
+// ocr · the switch
+do {
+    let suite = "studio.bast.bucket.checks.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suite)!; defer { defaults.removePersistentDomain(forName: suite) }
+    check("ocr switch: unset means on", OCRSetting.isEnabled(in: defaults))
+    OCRSetting.set(false, in: defaults)
+    check("ocr switch: off is remembered", !OCRSetting.isEnabled(in: defaults))
+    OCRSetting.set(true, in: defaults)
+    check("ocr switch: on again", OCRSetting.isEnabled(in: defaults))
+
+    let dir = tempDir(); defer { try? FileManager.default.removeItem(at: dir) }
+    let library = Library(root: dir.appendingPathComponent("a"))
+    library.ocrOnIngest = false // what the app sets when the switch is off
+    OCRQueue.shared.resetCounts()
+    let a = ingestText(library, dir, "Switch off invoice")
+    check("ocr off: ingest leaves the shot pending and the queue empty",
+          library.load(sidecar: a.sidecarPath)!.ocr.status == "pending" && OCRQueue.shared.pendingCount == 0)
+    library.ocrOnIngest = true // switched back on, then the app backfills
+    check("ocr on again: backfill queues the pending shot", OCRQueue.shared.backfill(library: library) == 1)
+    OCRQueue.shared.waitUntilIdle()
+    let read = library.load(sidecar: a.sidecarPath)!
+    check("ocr on again: the shot is read", read.ocr.status == "done" && (read.ocr.text ?? "").lowercased().contains("invoice"))
+    check("panel copy: off string wins over the queue", PanelCopy.ocr(pending: 3, enabled: false) == "Text reading is off" && PanelCopy.ocr(pending: 0, enabled: false) == "Text reading is off")
+}
+
 // ---- search ----
 do {
     let dir = tempDir(); defer { try? FileManager.default.removeItem(at: dir) }

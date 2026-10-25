@@ -516,8 +516,8 @@ private final class FooterView: NSView {
     }
     required init?(coder: NSCoder) { nil }
 
-    private var rightText: String { flash ?? PanelCopy.ocr(pending: pending) }
-    private var reading: Bool { flash == nil && pending > 0 }
+    private var rightText: String { flash ?? PanelCopy.ocr(pending: pending, enabled: OCRSetting.enabled) }
+    private var reading: Bool { flash == nil && pending > 0 && OCRSetting.enabled }
 
     func setOCR(pending n: Int, animated: Bool) {
         guard n != pending else { return }
@@ -537,6 +537,9 @@ private final class FooterView: NSView {
             self.flash = nil; self.sync()
         }
     }
+
+    /// The switch can change while the panel is closed: re-read it when the panel opens.
+    func refreshOCRState() { sync() }
 
     private func sync() {
         if reading { spinner.startAnimation(nil) } else { spinner.stopAnimation(nil) }
@@ -697,6 +700,7 @@ final class PanelView: NSView {
         emptyBlock.symbols = new.captureSymbols
         footer.savedIn = new.savedIn
         footer.setOCR(pending: new.ocrPending, animated: animated)
+        footer.refreshOCRState()
         let has = !new.items.isEmpty
         actions.sendLast.isEnabled = has
         actions.clear.isEnabled = has
