@@ -16,7 +16,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             report.errors.forEach { NSLog("Bucket: migration error: \($0)") }
         }
         controller = StatusController(library: library)
-        if OCRSetting.enabled { OCRQueue.shared.backfill(library: library) } // after the migration: ids and paths are final
+        // After the migration: ids and paths are final. The redact pass goes first (old sidecars keep secrets), off the main thread,
+        // whatever the OCR switch says; the backfill only touches shots without text, so the two never meet on a file.
+        let library = library
+        DispatchQueue.global(qos: .utility).async {
+            RedactPass.run(library: library)
+            if OCRSetting.enabled { OCRQueue.shared.backfill(library: library) }
+        }
     }
 }
 

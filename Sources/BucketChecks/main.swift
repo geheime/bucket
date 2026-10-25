@@ -736,6 +736,63 @@ do {
     check("backfill: second run finds nothing", OCRQueue.shared.backfill(library: library) == 0)
 }
 
+// ---- redact pass (old sidecars) ----
+do {
+    let dir = tempDir(); defer { try? FileManager.default.removeItem(at: dir) }
+    let library = Library(root: dir.appendingPathComponent("a"))
+    let m = Redact.mask
+    let secret = ingestText(library, dir, "x"), plain = ingestText(library, dir, "x"), card = ingestText(library, dir, "x")
+    let skipped = ingestText(library, dir, "x"), pending = ingestText(library, dir, "x"), done = ingestText(library, dir, "x")
+    func set(_ s: Shot, _ ocr: Shot.OCR) { _ = try! library.update(sidecar: s.sidecarPath) { $0.ocr = ocr; $0.batches = ["B1"] } }
+    set(secret, .init(status: "done", text: "login\npassword: hunter2\nkey sk-ant-AAAABBBBCCCC1234", ms: 7))
+    set(plain, .init(status: "done", text: "Quarterly report 2026\nTotal: 4242", ms: 3))
+    set(card, .init(status: "done", text: "pay 4242 4242 4242 4242", ms: 3))
+    set(skipped, .init(status: "skipped", text: nil))
+    set(pending, .init(status: "pending", text: nil))
+    set(done, .init(status: "done", text: "", ms: 1))
+    let marker = RedactPass.markerURL(library)
+    check("redact pass: no marker before", !FileManager.default.fileExists(atPath: marker.path))
+    let r = RedactPass.run(library: library)
+    check("redact pass: 2 sidecars changed, none dropped", r?.redacted == 2 && r?.dropped == 0)
+    let s1 = library.load(sidecar: secret.sidecarPath)!
+    check("redact pass: secrets masked, the rest of the text kept", s1.ocr.text == "login\npassword: \(m)\nkey \(m)" && s1.ocr.status == "done" && s1.ocr.ms == 7)
+    check("redact pass: card masked", library.load(sidecar: card.sidecarPath)!.ocr.text == "pay \(m)")
+    check("redact pass: normal text untouched", library.load(sidecar: plain.sidecarPath)!.ocr.text == "Quarterly report 2026\nTotal: 4242")
+    check("redact pass: merge-safe (batches kept)", s1.batches == ["B1"])
+    check("redact pass: skipped and pending untouched",
+          library.load(sidecar: skipped.sidecarPath)!.ocr == .init(status: "skipped", text: nil)
+          && library.load(sidecar: pending.sidecarPath)!.ocr == .init(status: "pending", text: nil)
+          && library.load(sidecar: done.sidecarPath)!.ocr.text == "")
+    check("redact pass: marker written", FileManager.default.fileExists(atPath: marker.path))
+    // second run: a secret planted after the marker is NOT touched (it ran once), and nothing is rewritten
+    set(secret, .init(status: "done", text: "password: late", ms: 1))
+    let before = (try? Data(contentsOf: URL(fileURLWithPath: plain.sidecarPath))) ?? Data()
+    check("redact pass: second run returns nil and touches nothing",
+          RedactPass.run(library: library) == nil && library.load(sidecar: secret.sidecarPath)!.ocr.text == "password: late"
+          && (try? Data(contentsOf: URL(fileURLWithPath: plain.sidecarPath))) == before)
+    // idempotent without the marker
+    try? FileManager.default.removeItem(at: marker)
+    check("redact pass: re-applying to redacted text is a no-op", RedactPass.run(library: library)?.redacted == 1 // only the late secret; the 2 already masked stay as they are
+          && library.load(sidecar: secret.sidecarPath)!.ocr.text == "password: \(m)" && library.load(sidecar: card.sidecarPath)!.ocr.text == "pay \(m)")
+    try? FileManager.default.removeItem(at: marker)
+    check("redact pass: nothing left to change on a third run", RedactPass.run(library: library)?.redacted == 0)
+    check("redact: apply twice equals once", ["password: hunter2 token=abc", "pay 4242 4242 4242 4242", m, "api_key: \(m)"].allSatisfy {
+        let once = Redact.apply($0).text; let twice = Redact.apply(once); return twice.text == once && twice.count == 0 })
+}
+// redact pass: a symlinked sidecar is never followed
+do {
+    let dir = tempDir(); defer { try? FileManager.default.removeItem(at: dir) }
+    let library = Library(root: dir.appendingPathComponent("a"))
+    let shot = ingestText(library, dir, "x")
+    _ = try! library.update(sidecar: shot.sidecarPath) { $0.ocr = .init(status: "done", text: "password: hunter2", ms: 1) }
+    let outside = dir.appendingPathComponent("outside.json")
+    try! FileManager.default.moveItem(atPath: shot.sidecarPath, toPath: outside.path)
+    try! FileManager.default.createSymbolicLink(atPath: shot.sidecarPath, withDestinationPath: outside.path)
+    _ = RedactPass.run(library: library)
+    check("redact pass: symlinked sidecar not followed (target unchanged)",
+          (try? String(contentsOf: outside))?.contains("hunter2") == true && (try? FileManager.default.destinationOfSymbolicLink(atPath: shot.sidecarPath)) == outside.path)
+}
+
 // ---- redact ----
 do {
     let m = Redact.mask

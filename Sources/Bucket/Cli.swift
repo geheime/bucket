@@ -59,6 +59,7 @@ enum Cli {
             exit(report.errors.isEmpty ? 0 : 1)
         case "ocr":
             guard args.contains("--backfill") else { fail("usage: ocr --backfill") }
+            if let r = RedactPass.run(library: library), r.redacted + r.dropped > 0 { print("redact: \(r.redacted) redacted, \(r.dropped) dropped") }
             guard OCRSetting.enabled else { warn(OCRSetting.backfillNotice); exit(0) }
             OCRQueue.shared.backfill(library: library)
             OCRQueue.shared.waitUntilIdle()
