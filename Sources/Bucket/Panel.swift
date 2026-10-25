@@ -366,6 +366,44 @@ private final class EdgeView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 
+/// Gear in the footer: opens the status-item menu (the one place settings live). 28 pt hit area, SF Symbol `gearshape`.
+final class GearButton: NSView {
+    static let side: CGFloat = 28
+    var onClick: (() -> Void)?
+    private var hovering = false { didSet { needsDisplay = true } }
+    override var isFlipped: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    init() {
+        super.init(frame: CGRect(x: 0, y: 0, width: GearButton.side, height: GearButton.side))
+        toolTip = "Settings"
+        setAccessibilityRole(.button)
+        setAccessibilityLabel("Settings")
+    }
+    required init?(coder: NSCoder) { nil }
+
+    override func updateTrackingAreas() {
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
+    }
+    override func mouseEntered(with event: NSEvent) { hovering = true }
+    override func mouseExited(with event: NSEvent) { hovering = false }
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard let symbol = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "Settings")?
+            .withSymbolConfiguration(.init(pointSize: 13, weight: .regular)) else { return }
+        let color: NSColor = hovering ? .labelColor : .secondaryLabelColor
+        let tinted = NSImage(size: symbol.size, flipped: false) { r in
+            symbol.draw(in: r); color.set(); r.fill(using: .sourceIn); return true
+        }
+        tinted.draw(in: CGRect(x: (bounds.width - symbol.size.width) / 2, y: (bounds.height - symbol.size.height) / 2,
+                               width: symbol.size.width, height: symbol.size.height))
+    }
+
+    override func mouseDown(with event: NSEvent) { onClick?() }
+}
+
 // MARK: Sections
 
 private final class HeaderView: NSView {
@@ -498,6 +536,9 @@ private final class ActionsView: NSView {
 private final class FooterView: NSView {
     var savedIn = "" { didSet { needsDisplay = true } }
     var onOpenFolder: (() -> Void)?
+    let gear = GearButton()
+    /// Right edge of the OCR text: the gear sits to its right (12 pt from the panel edge).
+    private var textEdge: CGFloat { bounds.width - 12 - GearButton.side - 4 }
     private(set) var pending = 0
     private var flash: String?
     private let spinner = NSProgressIndicator()
@@ -513,6 +554,7 @@ private final class FooterView: NSView {
         spinner.isDisplayedWhenStopped = false
         spinner.frame = CGRect(x: 0, y: 0, width: 10, height: 10)
         addSubview(spinner)
+        addSubview(gear)
     }
     required init?(coder: NSCoder) { nil }
 
@@ -548,13 +590,14 @@ private final class FooterView: NSView {
 
     private var pathRect: CGRect {
         let w = textWidth("Saved in ", PanelFont.footer) + textWidth(savedIn, PanelFont.path)
-        return CGRect(x: 16, y: 0, width: min(w + 2, bounds.width - 32 - 120), height: bounds.height)
+        return CGRect(x: 16, y: 0, width: min(w + 2, bounds.width - 32 - 120 - GearButton.side), height: bounds.height)
     }
 
     override func layout() {
         super.layout()
         let w = textWidth(rightText, PanelFont.footer)
-        spinner.frame.origin = CGPoint(x: bounds.width - 16 - w - 6 - 10, y: (bounds.height - 10) / 2)
+        gear.frame.origin = CGPoint(x: bounds.width - 12 - GearButton.side, y: (bounds.height - GearButton.side) / 2)
+        spinner.frame.origin = CGPoint(x: textEdge - w - 6 - 10, y: (bounds.height - 10) / 2)
     }
 
     override func resetCursorRects() { addCursorRect(pathRect, cursor: .pointingHand) }
@@ -570,7 +613,7 @@ private final class FooterView: NSView {
         drawText(lead, PanelFont.footer, .secondaryLabelColor, in: CGRect(x: 16, y: 0, width: lw + 2, height: bounds.height))
         drawText(savedIn, PanelFont.path, .labelColor, in: CGRect(x: 16 + lw, y: 0, width: pathRect.width - lw, height: bounds.height))
         let rw = textWidth(rightText, PanelFont.footer)
-        drawText(rightText, PanelFont.footer, .secondaryLabelColor, in: CGRect(x: bounds.width - 16 - rw - 2, y: 0, width: rw + 4, height: bounds.height), align: .right)
+        drawText(rightText, PanelFont.footer, .secondaryLabelColor, in: CGRect(x: textEdge - rw - 2, y: 0, width: rw + 4, height: bounds.height), align: .right)
     }
 }
 
@@ -594,6 +637,8 @@ final class PanelView: NSView {
     var onReveal: (String) -> Void = { _ in }
     var onOpenFolder: () -> Void = {}
     var onOpenSettings: () -> Void = {}
+    /// The gear: the view and the point (in it) where the settings menu should open.
+    var onOpenMenu: (NSView, NSPoint) -> Void = { _, _ in }
     var onEscape: () -> Void = {}
     /// The height changed (the number of rows, the last batch, the permission row): the window follows.
     var onResize: (CGFloat) -> Void = { _ in }
@@ -630,6 +675,10 @@ final class PanelView: NSView {
         actions.sendLast.onClick = { [weak self] in self?.onSendLast() }
         actions.clear.onClick = { [weak self] in self?.onClear() }
         footer.onOpenFolder = { [weak self] in self?.onOpenFolder() }
+        footer.gear.onClick = { [weak self] in
+            guard let self else { return }
+            self.onOpenMenu(self.footer.gear, CGPoint(x: self.footer.gear.bounds.minX, y: self.footer.gear.bounds.minY))
+        }
     }
     required init?(coder: NSCoder) { nil }
 

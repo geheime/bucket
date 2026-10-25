@@ -52,6 +52,11 @@ final class StatusController: NSObject, NSMenuDelegate {
         menu.delegate = self
         onPrimaryClick = { [weak self] in self?.panel.toggle() }
         panel.statusFrame = { [weak self] in self?.item.button?.window?.frame }
+        // Same menu as the right click, opened from the gear in the panel's footer (single source of settings).
+        panel.showSettingsMenu = { [weak self] view, point in
+            guard let self else { return }
+            self.menu.popUp(positioning: nil, at: point, in: view)
+        }
         panel.onOpenChanged = { [weak self] open in self?.companion.panelOpen = open }
         panel.actions = (
             copyNow: { [weak self] in self?.copyBatch(); self?.panel.confirmCopyNow() },

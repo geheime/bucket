@@ -24,6 +24,11 @@ final class PanelController: NSObject {
     var actions: (copyNow: () -> Void, recopy: () -> Void, sendLast: () -> Void, clear: () -> Void, remove: (String) -> Void)
         = ({}, {}, {}, {}, { _ in })
 
+    /// The gear: opens the settings menu at that view/point. Blocks while the menu tracks (like `popUp`).
+    var showSettingsMenu: (NSView, NSPoint) -> Void = { _, _ in }
+    /// The settings menu is open over the panel: the panel stays (it is where the user was), focus loss must not close it.
+    private var menuOpen = false
+
     private let library: Library
     private let bucket: BucketStore
     private let window: PanelWindow
@@ -86,6 +91,13 @@ final class PanelController: NSObject {
             NSWorkspace.shared.open(FileManager.default.fileExists(atPath: dir.path) ? dir : self.library.root)
         }
         view.onOpenSettings = { NSWorkspace.shared.open(ErrorPill.settingsURL) }
+        view.onOpenMenu = { [weak self] anchor, point in
+            guard let self else { return }
+            self.menuOpen = true
+            self.showSettingsMenu(anchor, point)
+            self.menuOpen = false
+            if self.isOpen { self.window.makeKeyAndOrderFront(nil) } // the menu took key; ESC works again
+        }
         view.onResize = { [weak self] h in self?.resize(to: h) }
 
         BucketWindows.register(staysIfVisible: true) { [weak self] in self?.closeNow() }
@@ -197,7 +209,7 @@ final class PanelController: NSObject {
     }
 
     private func resigned() {
-        guard isOpen, !BucketWindows.isCapturing else { return } // screencapture takes key; the panel stays
+        guard isOpen, !BucketWindows.isCapturing, !menuOpen else { return } // screencapture takes key; the panel stays
         closedByFocusLoss = Date()
         close()
     }
