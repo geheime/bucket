@@ -16,7 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             report.errors.forEach { NSLog("Bucket: migration error: \($0)") }
         }
         controller = StatusController(library: library)
-        OCRQueue.shared.backfill(library: library) // after the migration: ids and paths are final
+        if OCRSetting.enabled { OCRQueue.shared.backfill(library: library) } // after the migration: ids and paths are final
     }
 }
 
@@ -43,7 +43,7 @@ if args.isEmpty, let other = Cli.otherRunningInstance() {
 // `search` only reads: it must not create the archive (or touch its permissions) if the app was never opened.
 let readOnly = args.first == "search"
 let library = root.map { Library(root: $0, create: !readOnly) } ?? Library(create: !readOnly)
-library.ocrOnIngest = true // every capture is read in the background, app and CLI alike
+library.ocrOnIngest = OCRSetting.enabled // every capture is read in the background (unless "Read text in screenshots" is off), app and CLI alike
 
 // Headless modes never create the status item nor register hotkeys.
 if let command = args.first {

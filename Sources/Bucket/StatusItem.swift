@@ -303,6 +303,14 @@ final class StatusController: NSObject, NSMenuDelegate {
         }
     }
 
+    /// Off: new captures stay `pending`. On again: whatever piled up while it was off is read now.
+    @objc func toggleOCR() {
+        let on = !OCRSetting.enabled
+        OCRSetting.enabled = on
+        library.ocrOnIngest = on
+        if on { OCRQueue.shared.backfill(library: library) }
+    }
+
     @objc func openArchive() { NSWorkspace.shared.open(library.root) }
 
     // MARK: Clicks
@@ -423,6 +431,9 @@ final class StatusController: NSObject, NSMenuDelegate {
         }
         shortcutItem.submenu = shortcuts
         menu.addItem(shortcutItem)
+        let ocr = entry("Read text in screenshots", #selector(toggleOCR))
+        ocr.state = OCRSetting.enabled ? .on : .off
+        menu.addItem(ocr)
         let keep = entry("Keep in menu bar", #selector(toggleKeepInMenuBar))
         keep.state = companion.keepInMenuBar ? .on : .off
         menu.addItem(keep)

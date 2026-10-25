@@ -186,15 +186,26 @@ a JSON sidecar with the **full OCR text, in the clear**. That text can include p
 else that was on your screen. Nothing expires: Bucket never deletes anything on its own. Treat `~/Bucket` as
 sensitive data. Turning on FileVault is the single most useful thing you can do for it.
 
+**Turning the text off.** The menu has **Read text in screenshots**, on by default. Turn it off and new screenshots
+are not read: they stay in the archive with no text, `Bucket search` does not find them (it says so on stderr) and the
+panel footer reads "Text reading is off". Turn it on again and Bucket reads what piled up in the meantime.
+
+**Secrets in the stored text.** This release masks text that looks like an API key, a token, a card number or a
+password field before it is saved in the sidecar, as `[redacted:...]`. It is best effort: OCR splits and misreads text,
+so some secrets will get through. The PNG is not touched, so the secret is still visible in the image itself.
+
+**Password managers.** No text is read from a screenshot taken while a password manager is the app in front. Best
+effort: a manager that is only visible in the background is not detected.
+
 **Who can read it.** Bucket creates the archive for your user only (folders `drwx------`, files `-rw-------`), and it
 tightens an existing `~/Bucket` to `0700` when it opens it. Screenshots you send to the Desktop keep that mode too.
 Other apps running as you can still read it, as with any file in your home.
 
-**Spotlight and Time Machine (recommendation, not verified).** Spotlight normally indexes the PNGs and JSON files, which
-would make the OCR text searchable outside Bucket, and Time Machine would back it up. If you capture sensitive
-things, consider excluding `~/Bucket` in System Settings > Spotlight > Search Privacy, and in Time Machine's options.
-iCloud Drive does not sync `~/Bucket` unless you move it into a synced folder. We have not tested these behaviors
-on every macOS version, so check them on your own Mac.
+**Spotlight and Time Machine.** On macOS 26.2, Spotlight indexed the sidecar files but not the text inside them (we
+tested this on one Mac, so check yours). Even so, if you capture sensitive things you can exclude `~/Bucket` in System
+Settings > Spotlight > Search Privacy. Time Machine still backs `~/Bucket` up, and that is on purpose: the archive is
+your memory. If that is not what you want, exclude it in Time Machine's options. iCloud Drive does not sync `~/Bucket`
+unless you move it into a synced folder.
 
 **How to delete.** Bucket has no delete or purge command yet. Remove screenshots by hand in Finder, or erase
 everything with `rm -rf ~/Bucket` (this is permanent and also removes the originals).
