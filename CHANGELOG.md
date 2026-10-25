@@ -3,6 +3,32 @@
 All notable changes to Bucket are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] - 2026-10-25
+
+Privacy pass: the stored text is less valuable to anything that reads your files.
+
+### Added
+- Secrets in the OCR text are masked as `[redacted]` before the sidecar is written: API keys and tokens with known
+  prefixes (OpenAI, Anthropic, GitHub, Slack, AWS, Google, Stripe), JWTs, private key blocks, card numbers that pass
+  Luhn, and the value after `password`, `secret`, `token` or `api_key`. Best effort: OCR splits and misreads text, and
+  the PNG is not touched.
+- Screenshots already in the archive get the same masking once, on first launch of 0.4 (and in `ocr --backfill`).
+- No text is read from a screenshot taken while a password manager is the app in front (1Password, Bitwarden, Keychain
+  Access, Passwords and others). Best effort: one only visible in the background is not detected.
+- **Read text in screenshots** in the menu turns OCR off and on. While off, new screenshots are kept without text and
+  `search` says so; turning it back on reads what piled up.
+- A gear in the panel footer opens the settings menu.
+
+### Changed
+- On/off menu items show a checkbox in both states.
+- Screen Recording is requested again whenever a capture finds it missing, so Bucket reappears in System Settings
+  after the permission is removed or after switching between the zip and the Homebrew copy.
+- If a capture is asked while Bucket's own menu is open, the menu is closed first.
+- README: the Spotlight and Time Machine notes say what was measured on macOS 26.2.
+
+### Known issues
+- Capturing while Bucket's settings menu is open can still hang the crosshair. Close the menu first.
+
 ## [0.3.0] - 2026-10-25
 
 First public version.
