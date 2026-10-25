@@ -3,6 +3,11 @@
 All notable changes to Bucket are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+- The menu toggle "Keep in menu bar" is now **Follow the cursor**, shown the other way round (on = the companion follows the cursor). Your setting is kept.
+
 ## [0.4.0] - 2026-10-25
 
 Privacy pass: the stored text is less valuable to anything that reads your files.

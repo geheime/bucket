@@ -466,8 +466,9 @@ final class StatusController: NSObject, NSMenuDelegate {
         let ocr = entry("Read text in screenshots", #selector(toggleOCR))
         markToggle(ocr, on: OCRSetting.enabled)
         menu.addItem(ocr)
-        let keep = entry("Keep in menu bar", #selector(toggleKeepInMenuBar))
-        markToggle(keep, on: companion.keepInMenuBar)
+        // Shown as the positive: on = the companion follows the cursor (the stored preference is still keepInMenuBar, inverted).
+        let keep = entry("Follow the cursor", #selector(toggleKeepInMenuBar))
+        markToggle(keep, on: !companion.keepInMenuBar)
         menu.addItem(keep)
         menu.addItem(entry("Open archive", #selector(openArchive)))
         menu.addItem(.separator())
