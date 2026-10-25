@@ -137,7 +137,7 @@ final class StatusController: NSObject, NSMenuDelegate {
     @objc func capture() {
         guard !capturer.isBusy else { return }
         // No permission: the error pill (the only clickable piece) instead of a capture that would come back empty.
-        guard CGPreflightScreenCaptureAccess() else { requestScreenAccessOnce(); permissionDenied(); return }
+        guard CGPreflightScreenCaptureAccess() else { requestScreenAccess(); permissionDenied(); return }
         if permissionMissing { permissionMissing = false; refreshIcon() } // granted since the last attempt
 
         let frontApp = NSWorkspace.shared.frontmostApplication?.localizedName
@@ -152,14 +152,12 @@ final class StatusController: NSObject, NSMenuDelegate {
         }
     }
 
-    /// Registers Bucket in System Settings > Screen Recording (and shows the system prompt) the first time a capture is
-    /// attempted without permission, which is the moment the user's intent is clear. Not at launch: a permission dialog
-    /// before the user has done anything is the annoying option. macOS prompts once per app anyway, so later attempts
-    /// only get the error pill that opens Settings.
-    private func requestScreenAccessOnce() {
-        let key = "screenAccessRequested"
-        guard !UserDefaults.standard.bool(forKey: key) else { return }
-        UserDefaults.standard.set(true, forKey: key)
+    /// Registers Bucket in System Settings > Screen Recording on every capture attempt without permission. No "already asked"
+    /// flag: it went stale when the permission was removed (tccutil, or the zip and Homebrew copies, same bundle id, different
+    /// signatures) and the app then never re-registered. macOS shows its own prompt only once per app, and the call is
+    /// harmless afterwards; it returns at once. Not at launch: a permission dialog before the user did anything is the annoying option.
+    private func requestScreenAccess() {
+        UserDefaults.standard.removeObject(forKey: "screenAccessRequested") // the flag of earlier builds
         _ = CGRequestScreenCaptureAccess()
     }
 
