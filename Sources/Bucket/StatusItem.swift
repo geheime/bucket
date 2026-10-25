@@ -464,14 +464,27 @@ final class StatusController: NSObject, NSMenuDelegate {
         shortcutItem.submenu = shortcuts
         menu.addItem(shortcutItem)
         let ocr = entry("Read text in screenshots", #selector(toggleOCR))
-        ocr.state = OCRSetting.enabled ? .on : .off
+        markToggle(ocr, on: OCRSetting.enabled)
         menu.addItem(ocr)
         let keep = entry("Keep in menu bar", #selector(toggleKeepInMenuBar))
-        keep.state = companion.keepInMenuBar ? .on : .off
+        markToggle(keep, on: companion.keepInMenuBar)
         menu.addItem(keep)
         menu.addItem(entry("Open archive", #selector(openArchive)))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit Bucket", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+    }
+
+    /// On/off items only: the native checkmark shows nothing when off, so the item does not look clickable.
+    /// Radio groups (Paste format, Capture shortcut) keep the normal checkmark.
+    private func markToggle(_ item: NSMenuItem, on: Bool) {
+        func symbol(_ name: String) -> NSImage? {
+            let img = NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(.init(pointSize: 13, weight: .regular))
+            img?.isTemplate = true
+            return img
+        }
+        item.onStateImage = symbol("checkmark.square")
+        item.offStateImage = symbol("square")
+        item.state = on ? .on : .off
     }
 
     private func entry(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {
