@@ -1,6 +1,6 @@
 # Releasing Bucket
 
-Steps for the maintainer. Nothing here runs by itself. Replace `0.2.0` with the version being released.
+Steps for the maintainer. Nothing here runs by itself. Replace `0.2.0` with the version being released (the first public one is `0.3.0`).
 
 ## 0. Before anything
 
@@ -14,8 +14,10 @@ swift build && swift run BucketChecks
 Everything that ships must be committed before the tag. In particular:
 
 - `CHANGELOG.md`: move the entries under a `## [x.y.z]` heading.
-- `docs/media/gesture.gif` (the README points at it). To regenerate it, build and run `tools/make-media.sh <out-dir>`
-  (needs `ffmpeg`), then copy `<out-dir>/gif/sequence-light.gif` to `docs/media/gesture.gif`. Keep it under about 1 MB.
+- `docs/media/cover.gif` (the README points at it). It is rendered from `tools/cover/cover.html`: serve the repository
+  root over HTTP, run `python3 tools/cover/render.py http://127.0.0.1:<port>/tools/cover/cover.html <frames-dir> 20 9500`
+  (needs Python Playwright), then build the GIF from the frames with `ffmpeg` (palettegen + paletteuse). Keep it under
+  about 1.5 MB. `tools/make-media.sh` still exports the real pill animation from the app.
 - `packaging/homebrew/bucket.rb` in its final form (the tarball sha256 can only be known after the tag; see step 5).
 
 ```sh
@@ -27,7 +29,7 @@ git add -A && git commit -m "Prepare release 0.2.0"
 ## 1. Create the public repository (once)
 
 ```sh
-gh repo create geheime/bucket --public --description "Menu bar app for macOS: capture screenshots into a bucket, paste them all at once. Just buckit." --source . --remote origin
+gh repo create geheime/bucket --public --description "Menu bar app for macOS that hands your screenshots to Claude Code: capture with Cmd+Shift+4, paste with Cmd+V. Just buckit." --source . --remote origin
 gh repo edit geheime/bucket --add-topic macos --add-topic menu-bar --add-topic screenshot --add-topic claude-code --add-topic swift --add-topic ocr
 ```
 

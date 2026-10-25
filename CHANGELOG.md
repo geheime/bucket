@@ -3,9 +3,26 @@
 All notable changes to Bucket are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.3.0] - 2026-10-25
+
+First public version.
+
+### Added
+- The clipboard follows the app in front: terminals get the paths, browsers get one image per screenshot, other apps
+  (such as the Claude and ChatGPT desktop apps) get each screenshot as a file and as an image. The last batch keeps
+  following the app you switch to.
+- Screen Recording is requested on the first capture; until it is granted, the menu bar icon is struck through and a
+  capture shows a pill that opens the setting.
+- Bucket says when it cannot take its capture shortcut, at launch and in the menu.
+- A landing page (`site/`, https://bucket-app.pages.dev) with install instructions a coding agent can follow
+  (`site/agent.md`).
+- `docs/media/cover.gif`, the README cover, rendered from `tools/cover/`.
+- `batches.jsonl` is documented in the storage layout.
 
 ### Changed
+- Pasted paths are quoted: a path with spaces goes in double quotes, shell-special characters get a backslash, and a
+  path with a control character is not pasted.
+- The archive is created for your user only (`0700` folders, `0600` files).
 - The release zip is a universal binary (arm64 and x86_64) and also contains the `integrations` folder.
 - `scripts/package.sh` refuses to package a working tree with uncommitted changes unless `--allow-dirty` is given.
 - `First launch.txt` links to the repository, asks to verify the SHA-256 before removing quarantine, and covers both
@@ -16,13 +33,9 @@ All notable changes to Bucket are documented here. The format follows
 - CI: checkout without persisted credentials, job timeout, superseded runs are cancelled; Dependabot keeps the pinned
   actions up to date.
 
-### Added
-- `docs/media/gesture.gif`, the animation used in the README.
-- `batches.jsonl` is documented in the storage layout.
-
 ## [0.2.0]
 
-First public version.
+First version, not published.
 
 ### Added
 - Menu bar app for macOS 14+. The capture shortcut (default Cmd+Shift+4) runs the native macOS area selection

@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bucket · README cover (1280×640, deterministic)</title>
+<!--
+  README cover for github.com/geheime/bucket. The landing hero (site/index.html), light,
+  animated with the app's own motion (UI_KIT §4.1 absorb, §4.3 release, §4.4 keycaps).
+  Deterministic: window.setT(ms) paints the exact frame at ms, no clock. Loop = 9500 ms,
+  starts and ends empty. v2: the three captures are taken on the headline itself (macOS area selection). Render: tools/cover/render.py (frames) + ffmpeg (gif).
+  Assets referenced from ../../site/assets. Serve the repo root over HTTP.
+-->
+<style>
+:root{
+  --paper:#F9F8F6; --panel:#F1EFEC; --ink:#19191B; --hairline:#E8E6E3;
+  --accent:#E7195E; --chip:#FF5C9A; --chip-ink:#111318;
+  --mat:rgba(246,246,248,.92); --mat-ink:rgba(0,0,0,.85); --edge:rgba(0,0,0,.10);
+  --sans:-apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",Arial,sans-serif;
+  --round:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,"JetBrains Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper)}
+.stage{position:relative;width:1280px;height:640px;overflow:hidden;background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+h1{position:absolute;left:88px;top:212px;margin:0;font:700 90px/.92 var(--sans);letter-spacing:-.055em;z-index:3}
+h1 .l{display:block;white-space:nowrap}
+h1 .ev{color:var(--accent)}
+.art{position:absolute;left:720px;top:40px;width:520px;height:560px}
+.ring{position:absolute;width:560px;height:560px;border-radius:50%;border:1px solid var(--hairline);left:-20px;top:0}
+.disc{position:absolute;width:440px;height:440px;border-radius:50%;background:var(--panel);opacity:.8;left:40px;top:60px}
+.icon{position:absolute;width:430px;left:45px;top:58px;transform:rotate(-4deg);filter:drop-shadow(0 30px 40px rgba(77,55,69,.14)) drop-shadow(0 4px 10px rgba(77,55,69,.06))}
+/* pill (UI_KIT §3.1), scaled 1.25 like the landing hero; anchored right */
+.pill{position:absolute;right:30px;top:96px;height:38px;border-radius:19px;background:var(--mat);box-shadow:inset 0 0 0 .5px var(--edge),0 4px 14px rgba(15,17,21,.16);color:var(--mat-ink);overflow:hidden;transform-origin:100% 0}
+.pg{position:absolute;left:4px;top:4px;width:30px;height:30px}
+.g64{width:30px;height:30px;overflow:visible;color:var(--mat-ink)}
+.g64 .s{fill:var(--accent);transform-box:fill-box;transform-origin:50% 100%}
+.gl{transform-box:view-box}
+.pl{position:absolute;left:40px;top:11px;font:600 13px/16px var(--round);white-space:nowrap}
+.pl span{position:absolute;left:0;top:0}
+/* mini terminal */
+.term{position:absolute;left:640px;top:452px;width:430px;border-radius:12px;overflow:hidden;background:#16161A;box-shadow:0 0 0 .5px rgba(0,0,0,.3),0 24px 50px -18px rgba(22,22,26,.6);font:400 15px/24px var(--mono);color:#E6E4E8;z-index:4}
+.tbar{height:30px;display:flex;align-items:center;gap:10px;padding:0 12px;background:#222226;font:400 12px/1 var(--sans);color:#8C8A92}
+.dots{display:flex;gap:7px}.dots i{width:10px;height:10px;border-radius:50%;background:currentColor;opacity:.5}
+.tbody{padding:14px 16px 16px;min-height:56px;white-space:nowrap}
+.pr{color:#8C8A92}
+.chip{display:inline-block;font:600 13px/20px var(--mono);color:var(--chip-ink);background:var(--chip);border-radius:4px;padding:0 5px;margin-right:6px}
+.caret{display:inline-block;width:8px;height:17px;vertical-align:-3px;background:#E6E4E8}
+/* area selection + pointer (same language as the landing demo) */
+.sel{position:absolute;left:0;top:0;z-index:7;pointer-events:none}
+.sel .box{position:absolute;inset:0;background:rgba(120,150,200,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.95),0 0 0 1px rgba(0,0,0,.4)}
+.sel .dim{position:absolute;left:100%;top:100%;margin:8px 0 0 12px;font:600 12px/1 var(--sans);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.65);white-space:nowrap}
+.ptr{position:absolute;left:0;top:0;z-index:8;width:0;height:0}
+.ptr .arrow{position:absolute;left:-3px;top:-2px;width:20px;height:29px}
+.ptr .cross{position:absolute;left:-12px;top:-12px;width:24px;height:24px}
+/* keycaps (UI_KIT §5) */
+.kc{position:absolute;left:88px;top:470px;display:flex;gap:6px;z-index:5}
+.key{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--hairline),inset 0 -2px 0 var(--hairline),0 6px 14px rgba(15,17,21,.10);font:600 18px/1 var(--sans)}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <h1><span class="l"><span id="w0">Capture anything.</span></span><span class="l"><span id="w1">Paste</span> <span class="ev" id="w2">everything.</span></span></h1>
+  <div class="art">
+    <div class="ring"></div><div class="disc"></div>
+    <img class="icon" src="../../site/assets/bucket-3d-1120.webp" alt="">
+    <div class="pill" id="pill">
+      <span class="pg" id="pg"><svg class="g64" viewBox="0 -2 64 64"><g class="gl" id="gl">
+        <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.74 27 A19.33 19.33 0 1 1 51.26 27" stroke-width="1.6"/>
+          <path d="M12 22 L16.42 52.04 Q17 56 21 56 H43 Q47 56 47.58 52.04 L52 22" stroke-width="3.2"/>
+          <path d="M10 22 H54" stroke-width="3.2"/>
+        </g>
+        <path class="s" id="s0" d="M20.36 47.6 H43.64 L43.11 51.2 H20.89 Z"/>
+        <path class="s" id="s1" d="M19.39 41 H44.61 L44.08 44.6 H19.92 Z"/>
+        <path class="s" id="s2" d="M18.42 34.4 H45.58 L45.05 38 H18.95 Z"/>
+      </g></svg></span>
+      <span class="pl"><span id="la"></span><span id="lb"></span></span>
+    </div>
+  </div>
+  <div class="term">
+    <div class="tbar"><span class="dots"><i></i><i></i><i></i></span><span>~/shop — claude</span></div>
+    <div class="tbody" id="tbody"><span class="pr">&gt;</span> <span id="tin"></span><span class="caret" id="caret"></span></div>
+  </div>
+  <div class="kc" id="kc"></div>
+  <div class="sel" id="sel"><div class="box" id="selbox"></div><span class="dim" id="seldim"></span></div>
+  <div class="ptr" id="ptr">
+    <svg class="arrow" id="arrow" viewBox="0 0 18 26"><path d="M2 1.5v19.2l4.6-4.4 3 7.1 3.1-1.3-3-7h6.4z" fill="#000" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>
+    <svg class="cross" id="cross" viewBox="0 0 22 22"><path d="M11 1v20M1 11h20" stroke="#fff" stroke-width="3"/><path d="M11 1v20M1 11h20" stroke="#000" stroke-width="1.2"/></svg>
+  </div>
+</div>
+<script>
+/* ── easing (UI_KIT §4 curves) ── */
+function bez(x1,y1,x2,y2){ return function(t){ if(t<=0)return 0; if(t>=1)return 1; var lo=0,hi=1,u=t; for(var i=0;i<30;i++){ u=(lo+hi)/2; var x=3*x1*u*(1-u)*(1-u)+3*x2*u*u*(1-u)+u*u*u; if(x<t)lo=u; else hi=u; } return 3*y1*u*(1-u)*(1-u)+3*y2*u*u*(1-u)+u*u*u; }; }
+var E={ outStrong:bez(.16,1,.3,1), outQuart:bez(.25,1,.5,1), inOutQuart:bez(.76,0,.24,1), spring:bez(.34,1.56,.64,1), lin:function(t){return Math.max(0,Math.min(1,t));} };
+function prog(t,start,dur){ return Math.max(0,Math.min(1,(t-start)/dur)); }
+function lerp(a,b,p){ return a+(b-a)*p; }
+/* keyframes [[offset, value...]] linear between, value arrays */
+function kf(frames,p){ for(var i=1;i<frames.length;i++){ if(p<=frames[i][0]){ var a=frames[i-1],b=frames[i],q=(p-a[0])/(b[0]-a[0]); return a.slice(1).map(function(v,j){return lerp(v,b[j+1],q);}); } } return frames[frames.length-1].slice(1); }
+
+var $=function(id){return document.getElementById(id);};
+var pill=$('pill'), pg=$('pg'), gl=$('gl'), la=$('la'), lb=$('lb'), tin=$('tin'), kc=$('kc'), caret=$('caret');
+var S=[$('s0'),$('s1'),$('s2')];
+var meas=document.createElement('span'); meas.className='pl'; meas.style.cssText='position:absolute;visibility:hidden;left:0;top:0'; document.body.appendChild(meas);
+var W={}; function w(text){ if(!(text in W)){ meas.textContent=text; W[text]=4+30+6+Math.ceil(meas.getBoundingClientRect().width)+14; } return W[text]; }
+
+/* ── timeline (ms) ── */
+/* CAP = the instant each selection is released (t = 0 of absorb, §4.1). Before each: 480 ms travel,
+   520 ms drag, 140 ms hold — the landing demo's capture staging. Then ⌘V at P. */
+var LOOP=9500, CAP=[1440,3140,4840], P=6000;
+var stage=document.getElementById('stage'), ptr=$('ptr'), arrow=$('arrow'), cross=$('cross'), sel=$('sel'), selbox=$('selbox'), seldim=$('seldim');
+function rel(el){ var a=stage.getBoundingClientRect(), r=el.getBoundingClientRect(); return {x:r.left-a.left,y:r.top-a.top,w:r.width,h:r.height}; }
+function shots(){ return ['w0','w1','w2'].map(function(id){ var r=rel($(id)), fs=90, px=12; /* tight to the glyphs: cap top − pad … descender, so a line's box does not eat the other line */ var base=r.y+r.h/2+fs*.32; return {x0:Math.round(r.x-px), y0:Math.round(base-fs*.74-8), x1:Math.round(r.x+r.w+px), y1:Math.round(base+fs*.2)}; }); }
+function rest(){ var r=rel($('tbody')); return {x:Math.round(r.x+150), y:Math.round(r.y+r.h-6)}; }
+var MSG=' fix this';
+
+function setT(t){
+  t=((t%LOOP)+LOOP)%LOOP;
+  /* ── pointer + selection ── */
+  var SH=shots(), R0=rest(), px=R0.x, py=R0.y, mode='arrow', sx=0, sy=0, sw=0, sh=0, sop=0, fill=1;
+  var glide=E.inOutQuart;  /* travel */
+  var at={x:R0.x,y:R0.y};
+  for (var i=0;i<3;i++){
+    var R=CAP[i], ms=R-1140, ds=R-660, de=R-140, sh_=SH[i];
+    if (t>=ms){
+      var from=at, p1=glide(prog(t,ms,480));
+      px=lerp(from.x,sh_.x0,p1); py=lerp(from.y,sh_.y0,p1);
+      if (t>=ds){
+        var p2=E.outQuart(prog(t,ds,520));
+        px=lerp(sh_.x0,sh_.x1,p2); py=lerp(sh_.y0,sh_.y1,p2);
+        if (t<R){ mode='cross'; sx=sh_.x0; sy=sh_.y0; sw=px-sh_.x0; sh=py-sh_.y0; sop=1; }
+        else { var fo=prog(t,R,200); if (fo<1){ sx=sh_.x0; sy=sh_.y0; sw=sh_.x1-sh_.x0; sh=sh_.y1-sh_.y0; sop=1-fo; fill=0; } }
+      }
+    }
+    at={x:sh_.x1,y:sh_.y1};
+  }
+  if (t>=5400){ var p3=glide(prog(t,5400,480)); px=lerp(SH[2].x1,R0.x,p3); py=lerp(SH[2].y1,R0.y,p3); }
+  ptr.style.transform='translate('+px+'px,'+py+'px)';
+  arrow.style.opacity = mode==='arrow'?1:0; cross.style.opacity = mode==='cross'?1:0;
+  sel.style.opacity=sop; sel.style.transform='translate('+sx+'px,'+sy+'px)'; sel.style.width=Math.max(0,sw)+'px'; sel.style.height=Math.max(0,sh)+'px';
+  selbox.style.background = fill ? '' : 'transparent';
+  seldim.textContent = Math.round(Math.max(0,sw)*2)+' × '+Math.round(Math.max(0,sh)*2);
+  seldim.style.opacity = fill ? 1 : 0;
+  var capturing = mode==='cross';
+
+  /* how many shots are in the bucket */
+  var n=0; CAP.forEach(function(c){ if(t>=c+180) n++; });
+  var pasting = t>=P;
+
+  /* ── pill visibility / text / width ── */
+  var op=0, ty=0, sc=1, textA='', textB='', mix=0, width=w('Empty bucket');
+  var last=-1; CAP.forEach(function(c,i){ if(t>=c) last=i; });
+  if (!pasting){
+    if (last>=0){
+      var c=CAP[last], before=last, after=last+1;
+      var from = before===0 ? 'Empty bucket' : before+' in bucket', to = after+' in bucket';
+      var pe=E.outStrong(prog(t,c,180)); op=pe; ty=lerp(-4,0,pe);
+      mix = prog(t,c+180,160);
+      textA=from; textB=to;
+      width = lerp(w(from), w(to), E.outStrong(prog(t,c+180,200)));
+    }
+  } else {
+    var r=t-P;
+    op=1;
+    if (r<120){ textA='3 in bucket'; mix=0; var fade=1-prog(r,0,120); }
+    width=w('3 in bucket');
+    if (r>=1160){ width=lerp(w('3 in bucket'), w('Pasted 3'), E.outQuart(prog(r,1160,200))); }
+    if (r>=2060){ var pl=E.inOutQuart(prog(r,2060,200)); op=1-pl; sc=lerp(1,.92,pl); }
+  }
+  if (capturing) op=0;   /* every Bucket window is ordered out before screencapture (§8.1-4) */
+  pill.style.opacity=op;
+  pill.style.width=width+'px';
+  pill.style.transform='translateY('+ty+'px) scale('+(1.25*sc)+')';
+  pill.style.transformOrigin = (pasting && t-P>=2060) ? '50% 50%' : '100% 0';
+
+  /* ── label ── */
+  if (!pasting){ la.textContent=textA; lb.textContent=textB; la.style.opacity=1-mix; lb.style.opacity=mix; }
+  else {
+    var r2=t-P;
+    la.textContent='3 in bucket'; lb.textContent='Pasted 3';
+    la.style.opacity = r2<120 ? 1-r2/120 : 0;
+    lb.style.opacity = prog(r2,1160,160);
+  }
+
+  /* ── glyph: stripes, squash, release ── */
+  var stripeOp=[0,0,0], stripeSY=[1,1,1];
+  var gT='', gOrigin='50% 92%', pgX=0;
+  if (!pasting){
+    for (var i=0;i<3;i++){
+      var c2=CAP[i];
+      if (t>=c2+180){ var p=prog(t,c2+180,260); var v=kf([[0,0,.4],[.6,1.25,1],[1,1,1]],E.outStrong(p)); stripeSY[i]=v[0]; stripeOp[i]=v[1]; }
+    }
+    if (last>=0){
+      var sp=prog(t,CAP[last]+120,420);
+      if (sp>0 && sp<1){ var sv=kf([[0,1,1],[.2,1.08,.90],[.48,.97,1.04],[.74,1.01,.99],[1,1,1]],sp); gT='scale('+sv[0]+','+sv[1]+')'; }
+    }
+  } else {
+    var r3=t-P, dx=w('3 in bucket')/2-19;
+    /* slide to centre 200–400 outQuart; back 1160–1360 */
+    if (r3<1160) pgX=dx*E.outQuart(prog(r3,200,200)); else pgX=dx*(1-E.outQuart(prog(r3,1160,200)));
+    /* tilt 400–620 to −45 (toward the terminal, bottom-left); upright 1040–1280 */
+    var ang = r3<1040 ? -45*E.inOutQuart(prog(r3,400,220)) : -45*(1-E.inOutQuart(prog(r3,1040,240)));
+    gOrigin='50% 90%';
+    gT = ang ? 'rotate('+ang+'deg)' : '';
+    /* stripes empty top first: 620 / 735 / 850, 160 outStrong */
+    for (var k=0;k<3;k++){
+      var st=620+(2-k)*115, q=E.outStrong(prog(r3,st,160));
+      stripeOp[k]=1-q; stripeSY[k]=lerp(1,.4,q);
+    }
+    /* relief bounce 1280–1580 */
+    var rp=prog(r3,1280,300);
+    if (rp>0 && rp<1){ var rv=kf([[0,0,1,1],[.4,-3,1.03,.98],[.75,0,.99,1.01],[1,0,1,1]],E.outStrong(rp)); gOrigin='50% 100%'; gT='translateY('+rv[0]+'px) scale('+rv[1]+','+rv[2]+')'; }
+  }
+  S.forEach(function(s,i){ s.style.opacity=stripeOp[i]; s.style.transform='scaleY('+stripeSY[i]+')'; });
+  gl.style.transformOrigin=gOrigin; gl.style.transform=gT;
+  pg.style.transform='translateX('+pgX+'px)';
+
+  /* ── keycaps ⌘V (§4.4): in 0–138 outStrong, press 150–300, out 966–1150 ── */
+  var kstart=P, keys='⌘V';
+  for (var ci=0;ci<3;ci++){ if (t>=CAP[ci] && t<CAP[ci]+1150){ kstart=CAP[ci]; keys='⌘⇧4'; } }
+  var want=keys==='⌘V' ? '<span class="key">⌘</span><span class="key">V</span>' : '<span class="key">⌘</span><span class="key">⇧</span><span class="key">4</span>';
+  if (kc.innerHTML!==want) kc.innerHTML=want;
+  var kr=t-kstart, kop=0, ky=0, ks=1;
+  if (kr>=0 && kr<1150){
+    if (kr<138){ var e1=E.outStrong(kr/138); kop=e1; ky=lerp(-6,0,e1); ks=lerp(.96,1,e1); }
+    else if (kr<966){ kop=1; }
+    else { var e2=E.outStrong((kr-966)/184); kop=1-e2; ky=lerp(0,2,e2); ks=lerp(1,.98,e2); }
+  }
+  kc.style.opacity=kop; kc.style.transform='translateY('+ky+'px) scale('+ks+')';
+  var press=prog(kr,150,150), pv=press>0&&press<1 ? (press<.5? lerp(1,.92,E.outQuart(press*2)) : lerp(.92,1,E.outQuart((press-.5)*2))) : 1;
+  [].forEach.call(kc.children,function(k){ k.style.transform='scale('+pv+')'; });
+
+  /* ── terminal: chips land with each stripe, then the message; cleared (sent) before the loop ── */
+  var html='', topacity=1;
+  if (pasting){
+    var r4=t-P;
+    for (var j=0;j<3;j++){
+      var ct=620+j*115+80;
+      if (r4>=ct){ var co=E.outStrong(prog(r4,ct,200)); html+='<span class="chip" style="opacity:'+co+';transform:translateY('+lerp(2,0,co)+'px)">[Image #'+(j+1)+']</span>'; }
+    }
+    var typed=Math.max(0,Math.min(MSG.length,Math.floor((r4-1420)/45)+1));
+    if (r4>=1420) html+=MSG.slice(0,typed);
+    if (r4>=2500) topacity=1-E.outQuart(prog(r4,2500,260));
+    if (r4>=2760) html='';   /* sent: the prompt is empty again, same as frame 0 */
+  }
+  tin.innerHTML=html; tin.style.opacity=topacity;
+  caret.style.opacity = 1;
+}
+window.setT=setT;
+var q=new URLSearchParams(location.search).get('t');
+setT(q?+q:0);
+</script>
+</body>
+</html>

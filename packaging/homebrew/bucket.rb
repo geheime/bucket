@@ -16,9 +16,9 @@
 #       postflight { system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{appdir}/Bucket.app"] }
 #     (the cask installs into /Applications and needs no compiler).
 class Bucket < Formula
-  desc "Menu bar app that collects your screenshots and pastes them all at once"
+  desc "Menu bar app that hands your screenshots to your terminal AI agent"
   homepage "https://github.com/geheime/bucket"
-  url "https://github.com/geheime/bucket/archive/refs/tags/v0.2.0.tar.gz"
+  url "https://github.com/geheime/bucket/archive/refs/tags/v0.3.0.tar.gz"
   # TODO: fill after the tag exists: curl -sL <url> | shasum -a 256
   sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   license "MIT"

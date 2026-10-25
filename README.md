@@ -7,7 +7,7 @@
 <p align="center"><strong>Just buckit.</strong><br>Capture anything. Paste everything.</p>
 
 <p align="center">
-  <img src="docs/media/gesture.gif" width="720" alt="Animation of the Bucket pill: it shows 1 in bucket, then 3 in bucket, shrinks to the bucket icon, and shows Pasted 3 after the paste">
+  <img src="docs/media/cover.gif" width="880" alt="Three screenshots of the headline go into the bucket; one Cmd+V in the terminal and Claude Code receives them as [Image #1] [Image #2] [Image #3], and the pill says Pasted 3">
 </p>
 
 Bucket is a menu bar app for macOS. You take screenshots the way you always do; they fall into a bucket. One
@@ -26,7 +26,7 @@ It is deliberately small. It is a clipboard with memory, not a screenshot editor
 1. **Capture.** Press Cmd+Shift+4 and select an area. The selection is the native macOS one. The screenshot lands in the bucket.
 2. **Repeat.** Take as many as you need. The menu bar icon and the panel show what is in the bucket.
 3. **Paste.** Cmd+V in the terminal pastes the paths of every screenshot on one line, separated by spaces. Claude Code
-   attaches them as images. When the paste happens, the bucket empties itself.
+   attaches them as images, with no files to save or drag in. When the paste happens, the bucket empties itself.
 
 ## Install
 
