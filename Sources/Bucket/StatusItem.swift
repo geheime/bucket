@@ -17,6 +17,9 @@ final class StatusController: NSObject, NSMenuDelegate {
     private var barHeld = false
     /// No Screen Recording permission: the bar shows `bucket.slash`. Checked at launch and on every capture attempt.
     private var permissionMissing = false
+    /// The status-item menu is tracking (menuWillOpen → menuDidClose). A capture asked meanwhile waits for it to close.
+    private var menuOpen = false
+    private var capturePending = false
 
     static let seedPosition = 400
     /// Fixed item width: the 18 pt glyph sits centered, no count text beside it.
@@ -136,6 +139,17 @@ final class StatusController: NSObject, NSMenuDelegate {
 
     @objc func capture() {
         guard !capturer.isBusy else { return }
+        // Our own menu open: menu tracking owns the mouse (a click outside dismisses it), so screencapture's first click would be
+        // eaten and the crosshair would hang. Close it first and start once it is gone. macOS can capture an open menu, we cannot.
+        if menuOpen {
+            NSLog("Bucket: capture asked with the menu open: closing it first")
+            menu.cancelTrackingWithoutAnimation()
+            guard !capturePending else { return }
+            capturePending = true
+            // menuDidClose resumes it; this is the net if that callback never comes.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.resumeCapture() }
+            return
+        }
         // No permission: the error pill (the only clickable piece) instead of a capture that would come back empty.
         guard CGPreflightScreenCaptureAccess() else { requestScreenAccess(); permissionDenied(); return }
         if permissionMissing { permissionMissing = false; refreshIcon() } // granted since the last attempt
@@ -150,6 +164,21 @@ final class StatusController: NSObject, NSMenuDelegate {
         DispatchQueue.main.async { [weak self] in
             self?.capturer.capture { [weak self] result in self?.captured(result, frontApp: frontApp, frontBundleId: frontBundleId) }
         }
+    }
+
+    /// The capture that waited for the menu to close (once: menuDidClose and the timer both try to resume it).
+    private func resumeCapture() {
+        guard capturePending else { return }
+        capturePending = false
+        menuOpen = false
+        capture()
+    }
+
+    func menuWillOpen(_ menu: NSMenu) { if menu === self.menu { menuOpen = true } }
+    func menuDidClose(_ menu: NSMenu) {
+        guard menu === self.menu else { return }
+        menuOpen = false
+        if capturePending { DispatchQueue.main.async { [weak self] in self?.resumeCapture() } } // one turn: the menu window is really gone
     }
 
     /// Registers Bucket in System Settings > Screen Recording on every capture attempt without permission. No "already asked"
