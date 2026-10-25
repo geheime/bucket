@@ -736,6 +736,136 @@ do {
     check("backfill: second run finds nothing", OCRQueue.shared.backfill(library: library) == 0)
 }
 
+// ---- redact ----
+do {
+    let m = Redact.mask
+    func red(_ s: String) -> (text: String, count: Int) { Redact.apply(s) }
+    func hit(_ name: String, _ input: String, keeps: String = "") {
+        let r = red(input)
+        check("redact \(name): \(input.prefix(28))…", r.count == 1 && r.text.contains(m) && (keeps.isEmpty || r.text.contains(keeps)) && !r.text.contains(String(input.dropFirst(keeps.count + 4).prefix(12))))
+    }
+    // prefixed keys (all obviously fake)
+    hit("sk-", "key sk-FAKEFAKEFAKEFAKEFAKE1234 end")
+    hit("sk-proj", "sk-proj-FAKEFAKEFAKEFAKEFAKE1234")
+    hit("sk-ant", "sk-ant-api03-FAKEFAKEFAKE1234")
+    hit("sk-ant", "use sk-ant-FAKEFAKE9999 now")
+    hit("ghp_", "ghp_FAKEFAKEFAKEFAKEFAKE12345")
+    hit("gho_", "token-less gho_FAKEFAKEFAKEFAKEFAKE12345 here")
+    hit("github_pat_", "github_pat_FAKEFAKEFAKEFAKE_FAKEFAKE12")
+    hit("github_pat_", "x github_pat_11AFAKE0FAKE_FAKEFAKEFAKE y")
+    hit("xoxb-", "xoxb-0000000000-FAKEFAKEFAKE")
+    hit("xoxp-", "slack xoxp-1111111111-2222222222-FAKE")
+    hit("AKIA", "AKIAFAKEFAKEFAKE1234")
+    hit("AKIA", "id=AKIAABCDEFGHIJKLMNOP.")
+    hit("AIza", "AIzaFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE123")
+    hit("AIza", "key AIza" + String(repeating: "x", count: 35) + " ok")
+    // JWT
+    hit("jwt", "eyJhbGciOiJGQUtFIn0.eyJzdWIiOiJmYWtlIn0.FAKEsig_123")
+    hit("jwt", "Bearer eyJmYWtl.eyJmYWtl.sig-fake end")
+    // PEM
+    let pem = "before\n-----BEGIN RSA PRIVATE KEY-----\nFAKEFAKEFAKE\nFAKEFAKEFAKE\n-----END RSA PRIVATE KEY-----\nafter"
+    check("redact pem: block gone, surroundings kept", red(pem).text == "before\n\(m)\nafter" && red(pem).count == 1)
+    let pem2 = "-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----"
+    check("redact pem: plain PRIVATE KEY", red(pem2).text == m)
+    check("redact pem: unterminated block masks to the end", red("a\n-----BEGIN OPENSSH PRIVATE KEY-----\nFAKEFAKE\nFAKE").text == "a\n\(m)")
+    check("redact pem: public key block untouched", red("-----BEGIN PUBLIC KEY-----\nabc\n-----END PUBLIC KEY-----").count == 0)
+    // cards (Luhn)
+    check("redact card: 16 digits with spaces", red("pay 4242 4242 4242 4242 now").text == "pay \(m) now")
+    check("redact card: dashes", red("5555-5555-5555-4444").text == m)
+    check("redact card: 15 digits (Amex test)", red("378282246310005").text == m)
+    check("redact card: 16 digits failing Luhn NOT redacted", red("4242 4242 4242 4241").count == 0 && red("4242 4242 4242 4241").text == "4242 4242 4242 4241")
+    check("redact card: order number failing Luhn untouched", red("order 1234567890123456").count == 0)
+    check("redact card: 12 digits untouched", red("123456789018").count == 0)
+    check("redact card: 20-digit run not cut into a card", red("42424242424242424242").count == 0)
+    // labelled values
+    check("redact label: password:", red("password: hunter2").text == "password: \(m)")
+    check("redact label: Password= keeps label", red("Password=hunter2 next").text == "Password=\(m) next")
+    check("redact label: api_key", red("api_key = FAKEVALUE").text == "api_key = \(m)")
+    check("redact label: API-KEY", red("API-KEY: abc123").text == "API-KEY: \(m)")
+    check("redact label: apikey, secret, token, pwd, passwd",
+          ["apikey=1", "secret: 1", "token: 1", "pwd=1", "passwd: 1"].allSatisfy { red($0).count == 1 })
+    check("redact label: access_token=", red("access_token=abc").text == "access_token=\(m)")
+    check("redact label: stops at the line end", red("password: abc\nother line").text == "password: \(m)\nother line")
+    check("redact label: not double counted with a key", red("token: ghp_FAKEFAKEFAKEFAKEFAKE12345").count == 1)
+    // negatives
+    for s in ["tokenize", "tokenize this text", "The password is long", "secret garden", "token", "password",
+              "Invoice 2026 total due: 1,234.50", "sk-learn is a library", "ask-me-anything-about-things-that-matter",
+              "Hola, esto es una canción · 42 items", "line one\nline two\n\n  indented\ttab", "", "ünïcödé 日本語"] {
+        check("redact negative: byte-identical: \(s.prefix(30).replacingOccurrences(of: "\n", with: "⏎"))", red(s) == (s, 0))
+    }
+    // count
+    let multi = "a sk-FAKEFAKEFAKEFAKEFAKE1234 b ghp_FAKEFAKEFAKEFAKEFAKE12345 c 4242424242424242 d password: x"
+    check("redact: count is the number of masks", red(multi).count == 4 && red(multi).text == "a \(m) b \(m) c \(m) d password: \(m)")
+    check("redact: idempotent", red(red(multi).text).count == 0)
+    // known limit: a token broken across two lines by the screen layout
+    let short = red("sk-FAKEFAKE\nFAKEFAKEFAKE1234")
+    check("redact limit (documented): short key split across two lines is NOT caught (\(short.count))", short.count == 0)
+    let long = red("sk-FAKEFAKEFAKEFAKEFAKE1234\nFAKETAILFAKETAIL")
+    check("redact limit (documented): long head of a split key is masked, tail stays (\(long.count))", long.count == 1 && long.text.hasPrefix(m))
+
+    // legacy sidecar (no frontBundleId, no ms) decodes
+    let dir0 = tempDir(); defer { try? FileManager.default.removeItem(at: dir0) }
+    let lib0 = Library(root: dir0.appendingPathComponent("a"))
+    let s0 = ingestText(lib0, dir0, "x")
+    var obj = try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: s0.sidecarPath))) as! [String: Any]
+    obj.removeValue(forKey: "frontBundleId")
+    try! JSONSerialization.data(withJSONObject: obj).write(to: URL(fileURLWithPath: s0.sidecarPath))
+    check("shot: sidecar without frontBundleId decodes", lib0.load(sidecar: s0.sidecarPath)?.frontBundleId == nil)
+    let withId = try! lib0.ingest(captured: { let t = dir0.appendingPathComponent("t.png"); makePNG(at: t); return t }(), frontApp: "Safari", frontBundleId: "com.apple.Safari")
+    check("shot: frontBundleId round-trips", lib0.load(sidecar: withId.sidecarPath)?.frontBundleId == "com.apple.Safari")
+}
+
+// ocr · redaction end to end + password manager skip
+do {
+    let dir = tempDir(); defer { try? FileManager.default.removeItem(at: dir) }
+    let library = Library(root: dir.appendingPathComponent("a"))
+    library.ocrOnIngest = true
+    let png = dir.appendingPathComponent("c.png"); makePNG(at: png)
+    let plain = try! library.ingest(captured: png, frontApp: "Safari", frontBundleId: "com.apple.Safari")
+    OCRQueue.shared.waitUntilIdle()
+    check("ocr: ordinary app is read", library.load(sidecar: plain.sidecarPath)!.ocr.status == "done")
+
+    // Redaction runs on what Vision returns: draw a fake card number and read it back.
+    let card = ingestText(library, dir, "4242 4242 4242 4242")
+    OCRQueue.shared.waitUntilIdle()
+    let cardText = library.load(sidecar: card.sidecarPath)!.ocr.text ?? ""
+    print("      ocr card text: \(cardText)")
+    check("ocr: a card read by Vision is stored redacted", !cardText.contains("4242") && cardText.contains(Redact.mask))
+
+    let png2 = dir.appendingPathComponent("d.png"); makePNG(at: png2)
+    let pm = try! library.ingest(captured: png2, frontApp: "1Password", frontBundleId: "com.1password.1password")
+    OCRQueue.shared.waitUntilIdle()
+    let pmRead = library.load(sidecar: pm.sidecarPath)!
+    check("skip: password manager → status skipped at ingest", pm.ocr.status == "skipped" && pmRead.ocr.status == "skipped")
+    check("skip: no text, never enqueued", pmRead.ocr.text == nil && pmRead.ocr.ms == nil && OCRQueue.shared.pendingCount == 0)
+    check("skip: every listed manager matches", PasswordManagers.bundleIds.count >= 9
+          && ["com.bitwarden.desktop", "com.apple.keychainaccess", "com.apple.Passwords", "com.agilebits.onepassword7"].allSatisfy(PasswordManagers.contains))
+    check("skip: nil / unrelated bundle id does not match", !PasswordManagers.contains(nil) && !PasswordManagers.contains("com.apple.Safari"))
+}
+
+// ocr · skipped is terminal
+do {
+    let dir = tempDir(); defer { try? FileManager.default.removeItem(at: dir) }
+    let library = Library(root: dir.appendingPathComponent("a"))
+    let pm = ingestText(library, dir, "Secret vault")
+    _ = try! library.update(sidecar: pm.sidecarPath) { $0.ocr = .init(status: "skipped", text: nil) }
+    let late = try! library.ingest(captured: { let t = dir.appendingPathComponent("l.png"); makePNG(at: t); return t }(), frontApp: "Bitwarden", frontBundleId: "com.bitwarden.desktop")
+    check("backfill: skipped ones are not re-queued", OCRQueue.shared.backfill(library: library) == 0)
+    OCRQueue.shared.enqueue(sidecar: pm.sidecarPath, library: library) // forced straight into the queue
+    OCRQueue.shared.waitUntilIdle()
+    let after = library.load(sidecar: pm.sidecarPath)!
+    check("process: does not overwrite skipped", after.ocr.status == "skipped" && after.ocr.text == nil)
+    check("skip: a manager shot that was captured pending is skipped, not read, when it reaches the queue",
+          { () -> Bool in
+              // simulate OCR-off capture: pending + manager id
+              _ = try? library.update(sidecar: late.sidecarPath) { $0.ocr = .init(status: "pending", text: nil) }
+              OCRQueue.shared.backfill(library: library)
+              OCRQueue.shared.waitUntilIdle()
+              let r = library.load(sidecar: late.sidecarPath)!
+              return r.ocr.status == "skipped" && r.ocr.text == nil
+          }())
+}
+
 // ---- search ----
 do {
     let dir = tempDir(); defer { try? FileManager.default.removeItem(at: dir) }

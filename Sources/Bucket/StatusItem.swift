@@ -141,13 +141,14 @@ final class StatusController: NSObject, NSMenuDelegate {
         if permissionMissing { permissionMissing = false; refreshIcon() } // granted since the last attempt
 
         let frontApp = NSWorkspace.shared.frontmostApplication?.localizedName
+        let frontBundleId = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         // Law: every Bucket window is off screen BEFORE screencapture starts, then one runloop turn so the
         // window server has really removed them.
         companion.beginCapture()
         BucketWindows.hideAll()
         CATransaction.flush()
         DispatchQueue.main.async { [weak self] in
-            self?.capturer.capture { [weak self] result in self?.captured(result, frontApp: frontApp) }
+            self?.capturer.capture { [weak self] result in self?.captured(result, frontApp: frontApp, frontBundleId: frontBundleId) }
         }
     }
 
@@ -184,12 +185,12 @@ final class StatusController: NSObject, NSMenuDelegate {
         }
     }
 
-    private func captured(_ result: CaptureResult, frontApp: String?) {
+    private func captured(_ result: CaptureResult, frontApp: String?, frontBundleId: String?) {
         defer { BucketWindows.captureEnded(); panel.captureEnded() }
         switch result {
         case .captured(let tmp):
             do {
-                let shot = try library.ingest(captured: tmp, frontApp: frontApp)
+                let shot = try library.ingest(captured: tmp, frontApp: frontApp, frontBundleId: frontBundleId)
                 let before = bucket.count
                 companion.prepare()            // holds the bar icon: the drop has to land first
                 bucket.add(shot)

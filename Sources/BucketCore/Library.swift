@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 /// One screenshot in the archive. The sidecar JSON next to the PNG is the source of truth.
 public struct Shot: Codable, Equatable {
     public struct OCR: Codable, Equatable {
-        public var status: String // pending | done | failed
+        public var status: String // pending | done | failed | skipped (terminal: never read, no text)
         public var text: String?
         public var ms: Int? // optional so sidecars written before OCR still decode
         public init(status: String, text: String?, ms: Int? = nil) { self.status = status; self.text = text; self.ms = ms }
@@ -20,15 +20,16 @@ public struct Shot: Codable, Equatable {
     public let bytes: Int
     public let originalBytes: Int
     public let frontApp: String?
+    public let frontBundleId: String? // optional so sidecars written before 0.4 still decode
     public let resizeMs: Int
     public var ocr: OCR
     public var batches: [String]
 
     public init(id: String, createdAt: String, path: String, originalPath: String, width: Int, height: Int,
-                bytes: Int, originalBytes: Int, frontApp: String?, resizeMs: Int, ocr: OCR, batches: [String]) {
+                bytes: Int, originalBytes: Int, frontApp: String?, frontBundleId: String? = nil, resizeMs: Int, ocr: OCR, batches: [String]) {
         self.id = id; self.createdAt = createdAt; self.path = path; self.originalPath = originalPath
         self.width = width; self.height = height; self.bytes = bytes; self.originalBytes = originalBytes
-        self.frontApp = frontApp; self.resizeMs = resizeMs; self.ocr = ocr; self.batches = batches
+        self.frontApp = frontApp; self.frontBundleId = frontBundleId; self.resizeMs = resizeMs; self.ocr = ocr; self.batches = batches
     }
 
     public var sidecarPath: String { (path as NSString).deletingPathExtension + ".json" }
@@ -71,7 +72,7 @@ public final class Library {
 
     // MARK: Ingest (immediate circuit)
 
-    public func ingest(captured tmp: URL, frontApp: String?) throws -> Shot {
+    public func ingest(captured tmp: URL, frontApp: String?, frontBundleId: String? = nil) throws -> Shot {
         let now = Date()
         let id = Library.makeID(now)
         let day = Library.dayPath(now)
@@ -92,6 +93,7 @@ public final class Library {
         let (w, h) = try Library.optimize(from: original, to: optimized, maxLongEdge: maxLongEdge)
         let ms = Int((DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000)
 
+        let skip = PasswordManagers.contains(frontBundleId) // the screen of a password manager is never read
         let shot = Shot(
             id: id,
             createdAt: ISO8601DateFormatter().string(from: now),
@@ -101,12 +103,13 @@ public final class Library {
             bytes: Library.fileSize(optimized),
             originalBytes: Library.fileSize(original),
             frontApp: frontApp,
+            frontBundleId: frontBundleId,
             resizeMs: ms,
-            ocr: .init(status: "pending", text: nil),
+            ocr: .init(status: skip ? "skipped" : "pending", text: nil),
             batches: []
         )
         try Library.sidecarQueue.sync { try Library.write(shot, to: shot.sidecarPath) }
-        if ocrOnIngest { OCRQueue.shared.enqueue(sidecar: shot.sidecarPath, library: self) }
+        if ocrOnIngest, !skip { OCRQueue.shared.enqueue(sidecar: shot.sidecarPath, library: self) }
         return shot
     }
 

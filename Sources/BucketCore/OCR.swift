@@ -49,12 +49,12 @@ public final class OCRQueue {
         }
     }
 
-    /// Every sidecar that is still `pending`, or has no text (failed earlier). Returns how many were queued.
+    /// Every sidecar that is still `pending`, or has no text (failed earlier). `skipped` is terminal and never queued. Returns how many were queued.
     @discardableResult
     public func backfill(library: Library) -> Int {
         var n = 0
         for path in library.allSidecars() {
-            guard let shot = library.load(sidecar: path), shot.ocr.status == "pending" || shot.ocr.text == nil else { continue }
+            guard let shot = library.load(sidecar: path), shot.ocr.status != "skipped", shot.ocr.status == "pending" || shot.ocr.text == nil else { continue }
             enqueue(sidecar: path, library: library)
             n += 1
         }
@@ -74,14 +74,25 @@ public final class OCRQueue {
 
     private func process(_ path: String, library: Library) {
         guard let shot = library.load(sidecar: path) else { return } // gone (moved or deleted by hand)
+        // Terminal: a password manager was in front (or a racing run already decided). Also closes shots captured
+        // while OCR was off: pending, but from a manager.
+        if shot.ocr.status == "skipped" { return }
+        if PasswordManagers.contains(shot.frontBundleId) {
+            try? library.update(sidecar: path) { $0.ocr = .init(status: "skipped", text: nil) }
+            return
+        }
         // Already read by a racing run: leave it alone.
         if shot.ocr.status == "done", shot.ocr.text != nil { return }
         let start = DispatchTime.now()
-        let text = OCRQueue.recognize(URL(fileURLWithPath: shot.path))
+        // Fail closed: the raw text only ever lives in this scope. No redactor result → no text stored.
+        let text = OCRQueue.recognize(URL(fileURLWithPath: shot.path)).flatMap { Redact.redact($0)?.text }
         let ms = Int((DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000)
         let ok = text != nil
         do {
-            try library.update(sidecar: path) { $0.ocr = .init(status: ok ? "done" : "failed", text: text, ms: ms) }
+            try library.update(sidecar: path) {
+                if $0.ocr.status == "skipped" { return } // never overwrite a terminal state
+                $0.ocr = .init(status: ok ? "done" : "failed", text: text, ms: ms)
+            }
         } catch {
             NSLog("Bucket: could not save OCR for \(path): \(error.localizedDescription)")
         }
