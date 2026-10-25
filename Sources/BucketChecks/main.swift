@@ -749,6 +749,8 @@ do {
     hit("sk-proj", "sk-proj-FAKEFAKEFAKEFAKEFAKE1234")
     hit("sk-ant", "sk-ant-api03-FAKEFAKEFAKE1234")
     hit("sk-ant", "use sk-ant-FAKEFAKE9999 now")
+    hit("sk_live_", "stripe sk_live_FAKEFAKEFAKEFAKE1234 end")
+    hit("rk_test_", "rk_test_FAKEFAKEFAKEFAKE1234")
     hit("ghp_", "ghp_FAKEFAKEFAKEFAKEFAKE12345")
     hit("gho_", "token-less gho_FAKEFAKEFAKEFAKEFAKE12345 here")
     hit("github_pat_", "github_pat_FAKEFAKEFAKEFAKE_FAKEFAKE12")
@@ -789,7 +791,7 @@ do {
     check("redact label: not double counted with a key", red("token: ghp_FAKEFAKEFAKEFAKEFAKE12345").count == 1)
     // negatives
     for s in ["tokenize", "tokenize this text", "The password is long", "secret garden", "token", "password",
-              "Invoice 2026 total due: 1,234.50", "sk-learn is a library", "ask-me-anything-about-things-that-matter",
+              "Invoice 2026 total due: 1,234.50", "sk-learn is a library", "pk_live_FAKEFAKEFAKEFAKE1234 is public", "ask-me-anything-about-things-that-matter",
               "Hola, esto es una canción · 42 items", "line one\nline two\n\n  indented\ttab", "", "ünïcödé 日本語"] {
         check("redact negative: byte-identical: \(s.prefix(30).replacingOccurrences(of: "\n", with: "⏎"))", red(s) == (s, 0))
     }

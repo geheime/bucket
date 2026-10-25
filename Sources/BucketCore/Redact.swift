@@ -17,6 +17,7 @@ public enum Redact {
             (.labelled, rx(#"(?i)(?<![A-Za-z])(?:password|passwd|pwd|secret|token|api[_-]?key)[ \t]*[:=][ \t]*(\S+)"#)),
             (.plain, rx(b + #"sk-ant-[A-Za-z0-9_-]{8,}"#)),
             (.plain, rx(b + #"sk-[A-Za-z0-9_-]{20,}"#)),
+            (.plain, rx(b + #"[sr]k_(?:live|test)_[A-Za-z0-9]{16,}"#)), // Stripe secret and restricted keys
             (.plain, rx(b + #"gh[pousr]_[A-Za-z0-9]{20,}"#)),
             (.plain, rx(b + #"github_pat_[A-Za-z0-9_]{20,}"#)),
             (.plain, rx(b + #"xox[bp]-[A-Za-z0-9-]{10,}"#)),

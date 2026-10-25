@@ -191,7 +191,7 @@ are not read: they stay in the archive with no text, `Bucket search` does not fi
 panel footer reads "Text reading is off". Turn it on again and Bucket reads what piled up in the meantime.
 
 **Secrets in the stored text.** This release masks text that looks like an API key, a token, a card number or a
-password field before it is saved in the sidecar, as `[redacted:...]`. It is best effort: OCR splits and misreads text,
+password field before it is saved in the sidecar, as `[redacted]`. It is best effort: OCR splits and misreads text,
 so some secrets will get through. The PNG is not touched, so the secret is still visible in the image itself.
 
 **Password managers.** No text is read from a screenshot taken while a password manager is the app in front. Best
