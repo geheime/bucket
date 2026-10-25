@@ -1,5 +1,5 @@
 # Formula for the tap geheime/homebrew-tap (file: Formula/bucket.rb). Checked on Homebrew 7.0.9 against the
-# v0.3.0 tarball.
+# v0.4.0 tarball.
 #
 # Decision: formula that builds from the tag's source tarball, not a cask.
 #   - The standard Homebrew practice for a prebuilt GUI .app is a cask (it installs into /Applications). A formula
@@ -18,8 +18,8 @@
 class Bucket < Formula
   desc "Menu bar app that hands your screenshots to your terminal AI agent"
   homepage "https://github.com/geheime/bucket"
-  url "https://github.com/geheime/bucket/archive/refs/tags/v0.3.0.tar.gz"
-  sha256 "f6ace7d5c303997595f9bd4d2988829a09217bb4c899272e1785456b64ab2796"
+  url "https://github.com/geheime/bucket/archive/refs/tags/v0.4.0.tar.gz"
+  sha256 "4b5ce85dd8b3dcb03640b166ad0704ccf9421653750d07ccb939fdefe94519ec"
   license "MIT"
   head "https://github.com/geheime/bucket.git", branch: "main"
 
