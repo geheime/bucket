@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# The workflow only reads the repository; nothing here needs more (and no credentials are used).
+permissions:
+  contents: read
+
+# A newer push to the same branch or pull request cancels the run in progress.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # Package.swift declares swift-tools-version 5.9 and platforms [.macOS(.v14)].
+    # macos-15 ships Xcode 16 (Swift 6.x), which reads tools-version 5.9 manifests in Swift 5 language mode,
+    # and its SDK is newer than the macOS 14 deployment target, so nothing in the code is cut off.
+    # The default Xcode of the runner image is used on purpose: no third-party action to pin or trust.
+    # BucketChecks is assert-based (no XCTest), so it runs headless without a window server or permissions.
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4 (pinned by full SHA)
+        with:
+          persist-credentials: false
+      - name: Swift version
+        run: swift --version
+      - name: Build
+        run: swift build
+      - name: Checks
+        run: swift run BucketChecks
+      - name: Release build
+        run: swift build -c release

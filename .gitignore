@@ -1,0 +1,9 @@
+.build/
+.symbolichotkeys.backup-*.plist
+.DS_Store
+.claude/
+dist/
+*.p12
+*.pem
+*.key
+.env*
