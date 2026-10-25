@@ -1,0 +1,1330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bucket for macOS: screenshots for your terminal AI agent</title>
+<meta name="description" content="Bucket for macOS, screenshots for Claude Code in the terminal. Capture with ⌘⇧4, press ⌘V in your terminal and Claude Code attaches your screenshots as images. Later, your agent finds an old one by what it said. No MCP, no network. Open source, MIT.">
+<meta name="theme-color" content="#F9F8F6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121214" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Bucket for macOS: screenshots for your terminal AI agent">
+<meta property="og:description" content="Capture with ⌘⇧4, press ⌘V in your terminal, and Claude Code attaches your screenshots as images. A macOS menu bar app, open source (MIT).">
+<meta property="og:image" content="https://bucket-app.pages.dev/assets/og.png">
+<meta property="og:url" content="https://bucket-app.pages.dev/">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The magenta Bucket icon next to the headline Capture anything. Paste everything.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Weights used in the CSS: 400 · 600 · 700 (sans) and 400 · 600 (mono). On a Mac the system font (SF) wins; Inter / JetBrains Mono are the fallback elsewhere. -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="assets/bucket-3d-1120.webp" imagesrcset="assets/bucket-3d-560.webp 560w, assets/bucket-3d-1120.webp 1120w" imagesizes="(max-width: 860px) 78vw, 520px">
+<style>
+/* ════════════════════════════════════════════════════════════════════
+   TOKENS
+   Magenta = the app's own bucket.accent (UI_KIT §1.1), not the handoff's.
+   Paper / ink / hairline from the brand handoff. Muted darkened from
+   #77757A (4.29:1, fails AA) to #6E6C71 (4.89:1).
+   ════════════════════════════════════════════════════════════════════ */
+:root{
+  --paper:#F9F8F6; --surface:#FFFFFF; --panel:#F1EFEC;
+  --ink:#19191B; --ink-2:#3A393D; --muted:#6E6C71; --hairline:#E8E6E3;
+  --accent:#E7195E;        /* display text ≥24px and graphics only (4.21:1) */
+  --accent-ink:#B30A4B;    /* small accent text (6.46:1) */
+  --chip:#FF5C9A; --chip-ink:#111318;
+  /* the closing stage: ink in light mode */
+  /* magenta tint for install + trust: muted #655F66 5.27:1, accent-ink #B30A4B 5.82:1 */
+  --tint:#FCE7EF; --tint-2:#F8DCE6; --tint-line:rgba(179,10,75,.14); --tint-muted:#655F66; --tint-accent:#B30A4B;
+  --bone:#F0EDE9; --install:#19191B; --foot:#19191B;
+  --stage:#19191B; --stage-2:#232326; --stage-ink:#F4F2EF; --stage-muted:#B4B2B7; --stage-line:rgba(255,255,255,.12); --stage-accent:#FF5C9A;
+  /* fake macOS desktop of the demo (from panel_mock.html) */
+  --desk:radial-gradient(ellipse at 35% 25%,rgba(255,255,255,.55) 0%,transparent 57%),linear-gradient(135deg,#F1EFEE,#E5E2E0);
+  --mat:rgba(246,246,248,.86); --mat-ink:rgba(0,0,0,.85); --mat-ink-2:rgba(0,0,0,.5); --edge:rgba(0,0,0,.10);
+  --bar:#F6F5F3; --bar-line:#D8D6D3;
+  --glyph-accent:#E7195E;
+  --win:#FFFFFF; --win-bar:#F6F5F3; --win-line:#ECE9E6; --win-shadow:0 0 0 1px rgba(45,31,41,.06),0 16px 45px rgba(45,31,41,.08);
+  --term:#171719; --term-bar:#232225; --term-ink:#E6E4E8; --term-dim:#8C8A92;
+
+  --sans:-apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",Arial,sans-serif;
+  --round:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,"Inter",sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,"JetBrains Mono",Consolas,monospace;
+
+  /* type scale: perfect fourth (1.333) on 17px, hero out of scale on purpose */
+  --t-meta:13px; --t-body:17px; --t-lead:22px; --t-h3:23px; --t-h2:clamp(36px,4.6vw,56px);
+  --t-hero:clamp(44px,6.4vw,96px);
+
+  --margin:clamp(20px,5vw,64px);
+  --max:1280px;
+
+  --ease-out-strong:cubic-bezier(.16,1,.3,1);
+  --ease-out-quart:cubic-bezier(.25,1,.5,1);
+  --ease-in-out-quart:cubic-bezier(.76,0,.24,1);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#121214; --surface:#1B1B1E; --panel:#1E1E21;
+    --ink:#F2F1EF; --ink-2:#D3D1D6; --muted:#A3A1A6; --hairline:rgba(255,255,255,.10);
+    --accent:#FF5C9A; --accent-ink:#FF7FB0;
+    --tint:#2A1520; --tint-2:#341A27; --tint-line:rgba(255,127,176,.16); --tint-muted:#C9B9C1; --tint-accent:#FF7FB0;
+    --bone:#1A1A1D; --install:#202023; --foot:#09090A;
+    --stage:#0B0B0D; --stage-2:#1A1A1D; --stage-line:rgba(255,255,255,.10);
+    --desk:radial-gradient(ellipse at 35% 25%,rgba(255,255,255,.04) 0%,transparent 57%),linear-gradient(135deg,#232224,#1A191B);
+    --mat:rgba(40,41,46,.86); --mat-ink:rgba(255,255,255,.9); --mat-ink-2:rgba(255,255,255,.55); --edge:rgba(255,255,255,.12);
+    --bar:#262527; --bar-line:#343236;
+    --glyph-accent:#FF5C9A;
+    --win:#29282B; --win-bar:#302F32; --win-line:rgba(255,255,255,.07); --win-shadow:0 0 0 1px rgba(255,255,255,.06),0 16px 45px rgba(0,0,0,.35);
+    --term:#121214; --term-bar:#1D1C1F;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   BASE
+   ════════════════════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box}
+html{overflow-x:hidden;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 var(--t-body)/28px var(--sans);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+img,svg{display:block}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer}
+code,kbd,pre{font-family:var(--mono)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:6px}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.wrap{max-width:var(--max);margin:0 auto;padding-inline:var(--margin)}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:clamp(16px,2vw,24px)}
+.kicker{display:flex;align-items:center;gap:10px;margin:0;font:600 13px/16px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink)}
+.kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none}
+.h2{font:700 var(--t-h2)/1 var(--sans);letter-spacing:-.045em;margin:20px 0 0;text-wrap:balance}
+.lead{font-size:var(--t-lead);line-height:32px;color:var(--ink-2);letter-spacing:-.01em;margin:0}
+.muted{color:var(--muted)}
+.link{font-weight:600;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);transition:text-decoration-color 160ms var(--ease-out-quart)}
+@media (hover:hover) and (pointer:fine){.link:hover{text-decoration-color:currentColor}}
+.nowrap{white-space:nowrap}
+
+/* ════════════════════════════════════════════════════════════════════
+   PRODUCT PIECES — drawn from UI_KIT.md (pill §3, glyph §2, keycaps §5)
+   ════════════════════════════════════════════════════════════════════ */
+/* Arco master 64 (§2.2) */
+.g64{width:30px;height:30px;overflow:visible;color:var(--mat-ink)}
+.g64 .o{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}
+.g64 .s{fill:var(--glyph-accent);opacity:0;transform-box:fill-box;transform-origin:50% 100%}
+.g64[data-n="1"] .s0,.g64[data-n="2"] .s0,.g64[data-n="2"] .s1,.g64[data-n="3"] .s0,.g64[data-n="3"] .s1,.g64[data-n="3"] .s2,.g64[data-n="full"] .sf{opacity:1}
+.g64 .gl{transform-box:view-box}
+
+/* Companion pill (§3.1): 38 tall, padding 4/14, glyph 30, gap 6, SF Pro Rounded 13 semibold */
+.pill{position:absolute;display:flex;align-items:center;height:38px;padding:0 14px 0 4px;border-radius:19px;
+  background:var(--mat);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);
+  box-shadow:inset 0 0 0 .5px var(--edge),0 4px 14px rgba(15,17,21,.16);color:var(--mat-ink);white-space:nowrap;overflow:hidden}
+.pill .pg{width:30px;height:30px;flex:none;position:relative}
+.pill .pl{position:relative;margin-left:6px;font:600 13px/16px var(--round);font-variant-numeric:tabular-nums;letter-spacing:0}
+.pill .pl span{display:block}
+.pill .pl .alt{position:absolute;left:0;top:0;opacity:0}
+.pill.static{position:relative;display:inline-flex}
+
+/* Keycaps (§5): 32×32, radius 8, gap 6, SF Pro 15 semibold, bottom edge */
+.keys{display:flex;gap:6px}
+.key{min-width:32px;height:32px;padding:0 10px;border-radius:8px;display:grid;place-items:center;
+  background:var(--mat);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);
+  box-shadow:inset 0 0 0 .5px var(--edge),inset 0 -1px 0 var(--edge),0 4px 12px rgba(15,17,21,.14);
+  font:600 15px/1 var(--sans);color:var(--mat-ink)}
+/* the same keycaps on paper (outside the fake desktop) */
+.keys.onpaper .key{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--hairline),inset 0 -2px 0 var(--hairline)}
+
+/* [Image #N] chip, as Claude Code shows it (bucket.chip, §1.1) */
+.chip{display:inline-block;font:600 12px/18px var(--mono);color:var(--chip-ink);background:var(--chip);border-radius:4px;padding:0 5px;white-space:nowrap}
+
+/* install command — the CTA */
+.cmd{display:flex;align-items:center;gap:8px;max-width:100%;background:#19191B;color:#F4F2EF;border-radius:14px;padding:8px 8px 8px 20px;
+  box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 18px 40px -18px rgba(25,25,27,.55)}
+.cmd code{flex:1;min-width:0;font-size:15px;line-height:24px;white-space:nowrap;overflow-x:auto;scrollbar-width:none}
+.cmd code::-webkit-scrollbar{display:none}
+.cmd .ps{color:#FF5C9A;user-select:none;margin-right:10px}
+.copy{flex:none;display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border:0;border-radius:9px;background:rgba(255,255,255,.1);color:#F4F2EF;font:600 14px/1 var(--sans);transition:background 160ms var(--ease-out-quart),transform 120ms var(--ease-out-quart)}
+.copy:active{transform:scale(.97)}
+@media (hover:hover) and (pointer:fine){.copy:hover{background:rgba(255,255,255,.18)}}
+.copy svg{width:16px;height:16px}
+.copy .lbl{display:grid}
+.copy .lbl span{grid-area:1/1;transition:opacity 120ms linear}
+.copy .lbl .done{opacity:0}
+.copy.is-done .lbl .idle{opacity:0}.copy.is-done .lbl .done{opacity:1}
+@media (prefers-color-scheme: dark){.cmd{background:#232326;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}}
+
+/* ════════════════════════════════════════════════════════════════════
+   HEADER
+   ════════════════════════════════════════════════════════════════════ */
+.top{display:flex;align-items:center;justify-content:space-between;height:80px;border-bottom:1px solid var(--hairline)}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font:700 23px/1 var(--sans);letter-spacing:-.045em}
+.brand img{width:32px;height:32px}
+.dotc{color:var(--accent)}
+.nav{display:flex;align-items:center;gap:32px}
+.nav a{font:600 15px/1 var(--sans);text-decoration:none;color:var(--muted);transition:color 160ms var(--ease-out-quart)}
+@media (hover:hover) and (pointer:fine){.nav a:hover{color:var(--ink)}}
+.nav .gh{display:inline-flex;align-items:center;gap:8px;color:var(--ink);padding:11px 16px;border-radius:11px;box-shadow:inset 0 0 0 1px var(--hairline);background:var(--surface)}
+.nav .gh svg{width:16px;height:16px}
+
+/* ════════════════════════════════════════════════════════════════════
+   HERO
+   ════════════════════════════════════════════════════════════════════ */
+.hero{padding-top:64px;padding-bottom:120px;align-items:center}
+.hero-copy{grid-column:1 / span 7;position:relative;z-index:1}
+.hero h1{font:700 var(--t-hero)/.92 var(--sans);letter-spacing:-.055em;margin:28px 0 32px}
+.hero h1 .ev{color:var(--accent)}
+.hero h1 .l{display:block;white-space:nowrap}
+.hero .lead{max-width:30ch}
+.hero .lead kbd{font:600 .9em var(--sans)}
+.cta{margin-top:40px;display:flex;flex-direction:column;align-items:flex-start;gap:20px}
+.cta-row{display:flex;align-items:center;flex-wrap:wrap;gap:12px 13px}
+/* #D81B60 → white text 4.95:1 (the kit's #E7195E only reaches 4.47) */
+.btn-get{display:inline-flex;align-items:center;gap:11px;padding:17px 24px;border-radius:12px;background:#D81B60;color:#fff;text-decoration:none;font:600 15px/1 var(--sans);box-shadow:0 9px 20px rgba(216,27,96,.2);transition:background 160ms var(--ease-out-quart),transform 120ms var(--ease-out-quart),box-shadow 160ms var(--ease-out-quart)}
+.btn-get:active{transform:scale(.97)}
+.btn-get .arrow,.btn-second .arrow{font-size:16px;font-weight:400}
+.btn-second{display:inline-flex;align-items:center;gap:9px;padding:16px 18px;border-radius:12px;color:var(--ink);text-decoration:none;font:600 15px/1 var(--sans);transition:background 160ms var(--ease-out-quart)}
+@media (hover:hover) and (pointer:fine){.btn-get:hover{background:#C2134F;transform:translateY(-2px);box-shadow:0 12px 22px rgba(216,27,96,.26)}.btn-second:hover{background:var(--panel)}}
+.or-brew{margin:0;display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:14px;line-height:20px;color:var(--muted)}
+.or-brew code{font-size:13px;color:var(--ink-2)}
+.copy-mini{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:0;border-radius:7px;background:none;color:var(--muted);font:600 13px/1 var(--sans);transition:background 160ms var(--ease-out-quart),color 160ms var(--ease-out-quart)}
+.copy-mini svg{width:14px;height:14px}
+.copy-mini .lbl{display:grid}.copy-mini .lbl span{grid-area:1/1;transition:opacity 120ms linear}.copy-mini .lbl .done{opacity:0}
+.copy-mini.is-done .lbl .idle{opacity:0}.copy-mini.is-done .lbl .done{opacity:1}
+@media (hover:hover) and (pointer:fine){.copy-mini:hover{background:var(--panel);color:var(--ink)}}
+.cta-links{display:flex;flex-wrap:wrap;align-items:center;gap:8px 24px;font-size:15px;line-height:24px}
+.avail{margin:24px 0 0;font:400 14px/20px var(--sans);color:var(--muted)}
+.hero-art{grid-column:8 / span 5;position:relative;display:grid;place-items:center;min-height:520px}
+.hero-art::before{content:"";position:absolute;width:min(118%,600px);aspect-ratio:1;border-radius:50%;border:1px solid var(--hairline);left:50%;top:50%;transform:translate(-50%,-50%);z-index:-1}
+.hero-art::after{content:"";position:absolute;width:min(92%,470px);aspect-ratio:1;border-radius:50%;background:var(--panel);left:50%;top:50%;transform:translate(-50%,-50%);z-index:-1;opacity:.8}
+.hero-art picture{display:block;width:min(96%,500px);transform:rotate(-4deg);justify-self:end;margin-right:2%}
+.hero-art img{width:100%;height:auto;filter:drop-shadow(0 30px 40px rgba(77,55,69,.14)) drop-shadow(0 4px 10px rgba(77,55,69,.06))}
+.hero-art .pill{position:absolute;top:11%;right:2%;transform:scale(1.25);transform-origin:100% 0}
+.hero-art .tchip{position:absolute;left:-12%;bottom:2%;width:min(100%,420px);border-radius:12px;overflow:hidden;background:#16161A;box-shadow:0 0 0 .5px rgba(0,0,0,.3),0 24px 50px -18px rgba(22,22,26,.6);font:400 13px/22px var(--mono);color:#E6E4E8}
+.hero-art .tchip .tbar{height:28px;display:flex;align-items:center;gap:10px;padding:0 10px;background:#222226;font:400 11px/1 var(--sans);color:#8C8A92}
+.hero-art .tchip .tbar .dots i{width:9px;height:9px;opacity:.5}
+.hero-art .tchip .tbody{padding:12px 14px 14px}
+.hero-art .tchip .pr{color:#8C8A92}
+.hero-art .tchip .caret{height:14px;width:7px;vertical-align:-2px;margin-left:2px}
+@media (prefers-color-scheme: dark){.hero-art .tchip{box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}}
+
+/* ════════════════════════════════════════════════════════════════════
+   SECTIONS
+   ════════════════════════════════════════════════════════════════════ */
+.sec{padding-top:120px;padding-bottom:144px}
+/* section changes are marked by background, never by rules: paper → bone → paper → bone → tint → ink → deeper ink */
+.bone{background:var(--bone)}
+.sec-head{margin-bottom:48px}
+.sec-head > div{grid-column:1 / span 7}
+.sec-head > p{grid-column:1 / span 6;margin:24px 0 0;color:var(--muted);font-size:var(--t-body);line-height:28px;max-width:52ch}
+
+/* ── DEMO ─────────────────────────────────────────────────────────── */
+.demo{border-radius:23px;overflow:hidden;box-shadow:0 0 0 1px var(--hairline),0 16px 45px rgba(45,31,41,.06);background:var(--surface)}
+.stage{position:relative;background:var(--desk);overflow:hidden;user-select:none;-webkit-user-select:none;isolation:isolate}
+.mbar{height:32px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:var(--bar);border-bottom:1px solid var(--bar-line);font:600 13px/28px var(--sans);color:var(--mat-ink);position:relative;z-index:6}
+.mbar .app{display:flex;gap:18px}
+.mbar .app span+span{font-weight:400;opacity:.85}
+.mbar .right{display:flex;align-items:center;gap:14px;font-weight:400}
+.mbar .si{width:28px;height:24px;display:grid;place-items:center;border-radius:6px;background:color-mix(in srgb,var(--mat-ink) 8%,transparent)}
+.mbar .si svg{width:18px;height:18px;color:currentColor}
+.mbar .ghost{width:16px;height:11px;border-radius:3px;background:currentColor;opacity:.3}
+.desk{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);column-gap:28px;padding:36px 40px 88px;align-items:start}
+.win{position:relative;min-width:0;border-radius:16px;overflow:hidden;background:var(--win);box-shadow:var(--win-shadow)}
+.win .bar{height:40px;display:flex;align-items:center;gap:12px;padding:0 12px;background:var(--win-bar);border-bottom:1px solid var(--win-line);font:400 12px/1 var(--sans);color:var(--mat-ink-2)}
+.dots{display:flex;gap:7px}.dots i{width:11px;height:11px;border-radius:50%;background:currentColor;opacity:.28}
+.win .url{flex:1;text-align:center;background:var(--win);border-radius:6px;height:22px;line-height:22px;margin-right:30px;font-family:var(--sans)}
+.browser{z-index:1}
+.browser .body{padding:22px 22px 26px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;color:var(--mat-ink);font-family:var(--sans)}
+.err{grid-column:1 / -1;overflow-wrap:anywhere;border-radius:8px;padding:12px 14px;background:color-mix(in srgb,#E5484D 10%,var(--win));font:400 12px/18px var(--mono);color:var(--mat-ink)}
+.err b{display:flex;align-items:center;gap:8px;font-weight:600;color:#C0262D}
+.err b::before{content:"";width:7px;height:7px;border-radius:50%;background:#E5484D}
+@media (prefers-color-scheme: dark){.err b{color:#FF8A8F}}
+.card{position:relative;border-radius:10px;padding:14px;box-shadow:inset 0 0 0 1px var(--win-line);font-size:12px;line-height:18px}
+.card h4{margin:0 0 10px;font:600 13px/16px var(--sans)}
+.card .row{display:flex;justify-content:space-between;color:var(--mat-ink-2)}
+.card .row b{color:var(--mat-ink);font-weight:600}
+.card .pay{margin-top:12px;height:30px;border-radius:7px;background:var(--mat-ink);color:var(--win);font:600 12px/30px var(--sans);text-align:center}
+.chart{display:flex;align-items:flex-end;gap:7px;height:78px;padding-top:6px}
+.chart i{flex:1;border-radius:3px 3px 0 0;background:color-mix(in srgb,var(--mat-ink) 18%,transparent)}
+.chart i:nth-child(4){background:color-mix(in srgb,var(--mat-ink) 55%,transparent)}
+.card .cap{margin-top:8px;color:var(--mat-ink-2)}
+.term{margin-top:88px;z-index:2;background:var(--term);color:var(--term-ink);border-radius:14px;box-shadow:0 0 0 1px #353438,0 24px 46px rgba(23,17,22,.2)}
+.term .bar{background:var(--term-bar);border-color:#333137;color:#A7A2A8}
+.term .bar .url{background:none;margin-right:42px;font-family:var(--sans)}
+.term .dots i{opacity:.5}
+.term .tb{padding:16px 16px 18px;font:400 13px/20px var(--mono);min-height:250px}
+.term .dim{color:var(--term-dim)}
+.term .hello{border:1px solid rgba(255,92,154,.45);border-radius:6px;padding:8px 12px;margin-bottom:12px}
+.term .hello b{color:#FF7FB0;font-weight:600}
+.term .hist{margin:0 0 10px;color:var(--term-dim);word-break:break-all}
+.term .hist .chip{opacity:.75}
+.term .box{border:1px solid rgba(255,255,255,.22);border-radius:6px;padding:8px 12px;min-height:40px;overflow-wrap:anywhere;position:relative}
+.term .box .paths{word-break:break-all}
+.term .box .gt{color:var(--term-dim);margin-right:8px}
+.term .in{display:inline}
+.term .in .p{color:#E6E4E8}
+.term .in .chip{margin-right:6px}
+.caret{display:inline-block;width:8px;height:16px;vertical-align:-3px;background:#E6E4E8;animation:blink 1.06s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.term .hint{margin-top:8px;font-size:12px}
+.win.front{z-index:3}
+/* overlay layer: selection, pointer, pill, keycaps */
+.sel{position:absolute;left:0;top:0;width:0;height:0;z-index:7;opacity:0;background:rgba(120,150,200,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 0 0 1px rgba(0,0,0,.35);pointer-events:none}
+.sel .dim{position:absolute;right:-6px;bottom:-24px;transform:translateX(100%);font:600 11px/1 var(--sans);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);white-space:nowrap}
+.pointer{position:absolute;left:0;top:0;z-index:8;width:0;height:0;pointer-events:none}
+.pointer .arrow,.pointer .cross{position:absolute;left:0;top:0}
+.pointer .arrow{width:18px;height:26px;margin:-2px 0 0 -3px}
+.pointer .cross{width:22px;height:22px;margin:-11px 0 0 -11px;opacity:0}
+.pointer .pill{left:18px;top:18px;opacity:0;transform-origin:0 50%;scale:var(--pill-scale,1);transform-origin:0 0}
+.stage{--pill-scale:1.2}
+@media (max-width:860px){.stage{--pill-scale:1}}
+.pointer.flip .pill{left:auto;right:8px;transform-origin:100% 0}
+.kc{position:absolute;left:50%;bottom:28px;scale:var(--pill-scale,1);transform-origin:50% 100%;transform:translateX(-50%);z-index:9;opacity:0;pointer-events:none}
+.controls{display:flex;align-items:center;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;padding:16px 24px;border-top:1px solid var(--bar-line)}
+.status{margin:0;font:400 15px/24px var(--sans);color:var(--ink-2);min-height:24px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 16px;border-radius:11px;border:0;background:var(--panel);box-shadow:inset 0 0 0 1px var(--hairline);font:600 15px/1 var(--sans);color:var(--ink);transition:background 160ms var(--ease-out-quart),transform 120ms var(--ease-out-quart)}
+.btn:active{transform:scale(.97)}
+.btn kbd{font:600 13px/1 var(--sans);color:var(--muted)}
+.btn.primary{background:var(--ink);color:var(--paper);box-shadow:none}
+.btn.primary kbd{color:color-mix(in srgb,var(--paper) 70%,transparent)}
+.btn.quiet{background:none;box-shadow:none;color:var(--muted);padding:0 10px}
+@media (hover:hover) and (pointer:fine){.btn:hover{background:color-mix(in srgb,var(--panel) 80%,var(--ink) 6%)}.btn.primary:hover{background:color-mix(in srgb,var(--ink) 86%,var(--accent))}.btn.quiet:hover{background:none;color:var(--ink)}}
+.btn svg{width:16px;height:16px}
+
+/* ── WORKFLOW ─────────────────────────────────────────────────────── */
+.flow{row-gap:40px}
+.support{margin:24px 0 0;color:var(--muted);font-size:var(--t-body);line-height:28px;max-width:52ch}
+.steps{grid-column:1 / -1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:8px}
+.step{padding:28px 28px 28px;display:flex;flex-direction:column;background:var(--panel);border-radius:20px}
+.step .num{font:600 13px/16px var(--mono);color:var(--accent-ink);letter-spacing:.04em}
+.step h3{font:700 var(--t-h3)/28px var(--sans);letter-spacing:-.03em;margin:16px 0 8px}
+.step p{margin:0;font-size:16px;line-height:26px;color:var(--muted);max-width:30ch}
+.step p kbd{font:600 .95em var(--sans);color:var(--ink)}
+.step .vis{height:88px;display:flex;align-items:flex-end;margin-top:auto;padding-top:32px}
+.step .vis .tline{font:400 12px/20px var(--mono);background:#16161A;color:#E6E4E8;border-radius:10px;padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap}
+.step .vis .tline .pr{color:#8C8A92}
+.step .vis .pill{--mat:var(--surface);box-shadow:inset 0 0 0 1px var(--hairline),0 8px 18px -10px rgba(15,17,21,.25);--mat-ink:var(--ink)}
+.step .vis .pill .g64{color:var(--ink)}
+
+/* ── CLAUDE CODE ──────────────────────────────────────────────────── */
+.cc-copy{grid-column:1 / span 5}
+.cc-copy .lead{margin-top:28px;max-width:28ch}
+.cc-copy p.body{margin:24px 0 0;color:var(--muted);max-width:42ch}
+.cc-vis{grid-column:7 / span 6;align-self:center}
+.tw{border-radius:12px;overflow:hidden;background:#16161A;color:#E6E4E8;box-shadow:0 0 0 .5px rgba(0,0,0,.3),0 30px 60px -36px rgba(22,22,26,.7);font:400 13px/21px var(--mono)}
+@media (prefers-color-scheme: dark){.tw{box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}}
+.tw .tbar{height:32px;display:flex;align-items:center;gap:12px;padding:0 12px;background:#222226;font:400 12px/1 var(--sans);color:#8C8A92}
+.tw .dots i{width:10px;height:10px;opacity:.5}
+.tw .tbody{padding:18px 18px 22px;overflow-wrap:anywhere}
+@media (max-width:560px){.tw{font-size:12px;line-height:19px}.tw .tbody{padding:14px}.tw .out{margin-left:10px}}
+.tw .dim{color:#8C8A92}
+.tw .paths{color:#E6E4E8;word-break:break-all}
+.tw .box{margin-top:6px;border:1px solid rgba(255,255,255,.22);border-radius:6px;padding:8px 12px;line-height:24px}
+.tw .tool{margin-top:12px;color:#8C8A92}
+.tw .tool b{color:#E6E4E8;font-weight:600}
+.tw .out{margin:4px 0 0 18px;color:#B9B7BD;word-break:break-all}
+.memory{grid-column:1 / -1;margin-top:144px;align-items:center}
+.mem-copy{grid-column:1 / span 5}
+.mem-copy .lead{margin-top:28px;max-width:30ch}
+.mem-copy .body{margin:24px 0 0;color:var(--muted);max-width:44ch}
+.mem-copy code{font-size:.88em;color:var(--ink)}
+.mem-vis{grid-column:7 / span 6}
+.also{grid-column:1 / -1;margin-top:120px}
+.also h3{font:700 var(--t-h3)/28px var(--sans);letter-spacing:-.03em;margin:0}
+.also-body{padding-top:16px;max-width:62ch}
+/* toggles: <details>, keyboard-native; closed by default */
+.tgl summary,.also summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:14px;border-radius:8px}
+.tgl summary::-webkit-details-marker,.also summary::-webkit-details-marker{display:none}
+.tg{position:relative;width:22px;height:22px;flex:none;border-radius:50%;background:var(--panel);transition:transform 200ms var(--ease-out-strong)}
+.tg::before,.tg::after{content:"";position:absolute;left:6px;top:10.25px;width:10px;height:1.5px;border-radius:1px;background:var(--ink)}
+.tg::after{transform:rotate(90deg)}
+details[open] > summary .tg{transform:rotate(45deg)}
+.also .tg{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+@media (prefers-reduced-motion: reduce){.tg{transition:none}}
+.also-body p{margin:0;color:var(--ink-2);font-size:16px;line-height:26px;max-width:62ch}
+.also-body .fine{margin-top:12px}
+
+/* ── INSTALL + TRUST (closing stage) ──────────────────────────────── */
+.tinted{background:var(--tint);color:var(--ink);--hairline:var(--tint-line);--muted:var(--tint-muted);--accent-ink:var(--tint-accent);--panel:var(--tint-2)}
+/* install: lifted ink; the footer below sits on a deeper ink so it reads as the close */
+.closing{background:var(--install);color:var(--stage-ink);--hairline:var(--stage-line);--muted:var(--stage-muted);--ink:var(--stage-ink);--ink-2:#DAD8DC;--accent-ink:#FF7FB0;--panel:#2C2C30}
+.closing.sec{padding-top:112px;padding-bottom:128px}
+.closing .kicker .dot{background:var(--stage-accent)}
+.closing .cmd{background:#2C2C30;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.install{align-items:center}
+.install .ihead{grid-column:1 / span 7}
+.install .ihead .lead{margin-top:24px;max-width:40ch}
+.install .ihead .cmd{width:min(100%,460px)}
+.install .ihead .cmd code{font-size:14px}
+.agent-cta{margin-top:40px;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.sec-actions{display:flex;flex-wrap:wrap;gap:4px 24px}
+.sec-actions .btn-out{padding:10px 0}
+button.btn-out{border:0;background:none;cursor:pointer}
+.btn-out svg{width:15px;height:15px}
+.copy-agent .lbl{display:grid}.copy-agent .lbl span{grid-area:1/1;text-align:left;transition:opacity 120ms linear}.copy-agent .lbl .done{opacity:0}
+.install .agent-cta .cmd{width:min(100%,460px)}
+.agent-cta .agent-url{flex-basis:100%}
+.btn-out{display:inline-flex;align-items:center;gap:9px;padding:16px 18px;border-radius:12px;color:var(--ink);text-decoration:none;font:600 15px/1 var(--sans);transition:background 160ms var(--ease-out-quart)}
+@media (hover:hover) and (pointer:fine){.btn-out:hover{color:var(--stage-accent)}}
+.btn-agent{display:inline-flex;align-items:center;gap:11px;padding:17px 24px;border:0;border-radius:12px;background:#D81B60;color:#fff;font:600 15px/1 var(--sans);box-shadow:0 9px 20px rgba(216,27,96,.24);transition:background 160ms var(--ease-out-quart),transform 120ms var(--ease-out-quart)}
+.btn-agent svg{width:17px;height:17px}
+.btn-agent:active{transform:scale(.97)}
+@media (hover:hover) and (pointer:fine){.btn-agent:hover{background:#C2134F;transform:translateY(-2px)}}
+.btn-agent .lbl,.copy-link .lbl{display:grid}.btn-agent .lbl span,.copy-link .lbl span{grid-area:1/1;transition:opacity 120ms linear;text-align:left}
+.btn-agent .lbl .done,.copy-link .lbl .done{opacity:0}
+.is-done .lbl .idle{opacity:0}.is-done .lbl .done{opacity:1}
+.agent-url{margin:4px 0 0;font-size:14px;line-height:22px;color:var(--muted)}
+.other{margin-top:56px}
+.other-h{margin:0 0 4px;font:600 13px/16px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.other-l{margin:20px 0 10px;font:600 15px/20px var(--sans);color:var(--ink)}
+.other .fine{margin-top:12px;font-size:14px;line-height:22px}
+.other .fine code{font-size:.9em}
+.copy-link{border:0;background:none;padding:0;color:var(--ink-2);font:600 14px/20px var(--sans);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent)}
+@media (hover:hover) and (pointer:fine){.copy-link:hover{text-decoration-color:currentColor}}
+.install .ihead .fine{margin-top:20px;max-width:52ch}
+.install .ihead .cta-links{margin-top:24px}
+.launch{grid-column:8 / span 5;margin:0;padding:0;list-style:none;counter-reset:l}
+.launch .lt{font:600 13px/16px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 16px}
+.launch li{counter-increment:l;display:grid;grid-template-columns:40px 1fr;padding:20px 0;border-top:1px solid var(--hairline)}
+.launch li:last-child{border-bottom:1px solid var(--hairline)}
+.launch li.lt::before{content:none}
+.launch li::before{content:counter(l,decimal-leading-zero);font:600 13px/26px var(--mono);color:var(--accent-ink)}
+.launch b{display:block;font-weight:600;color:var(--ink);font-size:17px;line-height:26px}
+.launch span{color:var(--muted);font-size:16px;line-height:26px}
+.trust{}
+.trust .thead{grid-column:1 / span 7}
+.tsub{margin:24px 0 0;color:var(--muted);font-size:var(--t-body);line-height:28px;max-width:52ch}
+.tgrid{grid-column:1 / -1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:clamp(16px,2vw,24px);margin-top:48px}
+.tgrid{align-items:start;row-gap:8px}
+.tgrid details{padding:20px 0 24px;border-top:1px solid var(--hairline)}
+.tgrid summary{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;width:100%}
+.tgrid details p{margin-top:12px}
+.tgrid h3{font:700 20px/26px var(--sans);letter-spacing:-.02em;margin:0;color:var(--ink)}
+.tgrid p{margin:0;color:var(--muted);font-size:16px;line-height:26px;max-width:36ch}
+.tgrid code{font-size:.9em;color:var(--ink)}
+.more{grid-column:1 / -1;margin-top:16px;font-size:16px}
+/* ── FOOTER (ink) + BAST seal (ported from malabartista-site/public/hire.html) ── */
+.site-foot{background:var(--foot);color:var(--stage-ink);--hairline:var(--stage-line);--muted:var(--stage-muted);--ink:var(--stage-ink);
+  --seal-ring:#77757A;--seal-sign:#F4F2EF;--seal-glass:rgba(255,255,255,.16);--seal-glass-edge:rgba(255,255,255,.32)}
+.ft-main{padding-top:72px;padding-bottom:88px;align-items:end}
+.ft-sign{grid-column:1 / span 8;margin:0;font:700 clamp(64px,11vw,168px)/.86 var(--sans);letter-spacing:-.06em}
+.ft-sign .dotc,.site-foot .brand .dotc{color:var(--stage-accent)}
+.ft-cols{grid-column:9 / span 4;display:grid;grid-template-columns:1fr 1fr;gap:24px;padding-bottom:10px}
+.ft-h{margin:0 0 14px;font:600 13px/16px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--stage-accent)}
+.ft-cols ul{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:15px;line-height:24px;color:var(--muted)}
+.ft-cols a{color:var(--stage-ink);text-decoration:none;transition:color 160ms var(--ease-out-quart)}
+@media (hover:hover) and (pointer:fine){.ft-cols a:hover{color:var(--stage-accent)}}
+.ft-base{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:24px 32px;padding:32px 0 48px;border-top:1px solid var(--stage-accent) /* magenta: explicit request from Seba, 25/10 */}
+.ft-base .brand{font-size:24px;color:var(--stage-ink)}
+.foot{display:flex;flex-direction:row;align-items:center;gap:22px;text-align:left}
+.foot .sign-block{display:flex;flex-direction:column;gap:5px}
+.seal{width:84px;height:84px;position:relative;flex:0 0 auto}
+.seal svg{width:100%;height:100%;transform-origin:50% 50%;animation:ringSpin 30s linear infinite}
+@keyframes ringSpin{to{transform:rotate(360deg)}}
+.seal .ring-text{font-family:var(--mono);font-size:7.1px;letter-spacing:.29em;text-transform:uppercase;fill:var(--seal-ring,#A6A6A2)}
+.seal .core{position:absolute;inset:26%;border-radius:50%;background:conic-gradient(from var(--foil,0deg),#FFB8C5,#FFD0A5,#FFEC9E,#B8E8B0,#A5C8FF,#C5B5FF,#FFB5E5,#FFB8C5);filter:blur(5px) saturate(150%);opacity:.58}
+.seal .core-glass{position:absolute;inset:26%;border-radius:50%;background:var(--seal-glass,rgba(255,255,255,.42));backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);border:1px solid var(--seal-glass-edge,rgba(255,255,255,.7))}
+@keyframes foilCycle{to{--foil:360deg}}
+@property --foil{syntax:'<angle>';initial-value:0deg;inherits:false}
+button.seal{display:block;padding:0;border:0;background:none;cursor:pointer;border-radius:50%;transition:transform 400ms var(--ease-out-strong)}
+@media (hover:hover) and (pointer:fine){button.seal:hover{transform:scale(1.04)}}
+.foot .sign{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--seal-sign,#58585A);margin:0}
+.foot .meta{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:#8E8C91;padding-left:16.8px}
+@media (prefers-color-scheme: dark){
+  :root{--seal-ring:#77757A;--seal-sign:#F4F2EF;--seal-glass:rgba(255,255,255,.16);--seal-glass-edge:rgba(255,255,255,.32)}
+}
+.acta-backdrop{position:fixed;inset:0;z-index:1200;background:rgba(15,15,14,.42);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity 320ms var(--ease-out-strong)}
+.acta-backdrop.is-open{opacity:1;pointer-events:auto}
+.acta-modal{position:fixed;z-index:1201;left:50%;top:50%;transform:translate(-50%,-46%) scale(.98);opacity:0;pointer-events:none;visibility:hidden;width:min(560px,calc(100vw - 2 * var(--margin)));max-height:min(86vh,720px);overflow-y:auto;background:var(--surface);color:var(--ink);border-radius:22px;border:1px solid var(--hairline);padding:clamp(26px,3.4vw,40px);box-shadow:0 40px 90px -30px rgba(15,15,14,.45);transition:opacity 280ms var(--ease-out-strong),transform 280ms var(--ease-out-strong),visibility 0s linear 280ms}
+.acta-modal.is-open{opacity:1;pointer-events:auto;visibility:visible;transform:translate(-50%,-50%) scale(1);transition:opacity 280ms var(--ease-out-strong),transform 280ms var(--ease-out-strong),visibility 0s}
+.acta-modal .close{position:absolute;top:14px;right:14px;width:34px;height:34px;border:0;border-radius:50%;background:none;font-size:19px;color:var(--muted);display:grid;place-items:center;transition:background 200ms,color 200ms}
+@media (hover:hover) and (pointer:fine){.acta-modal .close:hover{background:var(--panel);color:var(--ink)}}
+.acta-modal .eyebrow{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent-ink)}
+.acta-modal .firma{font-family:var(--sans);font-weight:700;font-size:clamp(19px,2.1vw,24px);letter-spacing:-.028em;line-height:1.2;margin:14px 0 18px}
+.acta-modal p{font-size:14px;line-height:1.62;color:var(--muted);margin:0 0 14px}
+.acta-rows{border-top:1px solid var(--hairline);margin:20px 0 18px}
+.acta-rows .r{display:grid;grid-template-columns:104px 1fr;gap:14px;padding:11px 0;border-bottom:1px solid var(--hairline);align-items:baseline}
+.acta-rows .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.acta-rows .v{font-family:var(--mono);font-size:12px;color:var(--ink);word-break:break-all}
+.acta-note{font-size:12.5px !important;line-height:1.6;padding-top:14px;border-top:1px dashed var(--hairline)}
+.acta-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:20px}
+.acta-actions a{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:100px;border:1px solid var(--hairline);font-size:12.5px;font-weight:600;color:var(--ink);text-decoration:none;transition:background 220ms,transform 220ms var(--ease-out-quart)}
+@media (hover:hover) and (pointer:fine){.acta-actions a:hover{background:var(--panel);transform:translateY(-2px)}}
+
+/* ════════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ════════════════════════════════════════════════════════════════════ */
+@media (max-width:1100px){
+  .hero-copy{grid-column:1 / span 7}.hero-art{grid-column:8 / span 5;min-height:440px}
+  .hero-art .tchip{left:-8%;width:min(108%,380px)}
+  .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cc-copy,.cc-vis,.mem-copy,.mem-vis{grid-column:1 / -1}.cc-vis,.mem-vis{margin-top:48px}.memory{margin-top:112px}
+
+  .install .ihead{grid-column:1 / span 12}.launch{grid-column:1 / span 12;margin-top:64px}
+  .tgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:860px){
+  .nav a:not(.gh){display:none}
+  .hero{padding-top:40px;padding-bottom:80px}
+  .hero-copy,.hero-art{grid-column:1 / -1}
+  .hero-art{min-height:0;margin-top:56px;padding:24px 0}
+  .hero-art picture{width:min(78%,420px)}
+  .hero-art::before{width:min(100%,520px)}.hero-art::after{width:min(84%,420px)}
+  .hero-art picture{justify-self:center;margin-right:0}
+  .hero-art .pill{right:2%;top:4%}
+  .hero-art .tchip{left:0;bottom:0}
+  .sec{padding-top:88px;padding-bottom:104px}
+  .sec-head > div,.sec-head > p{grid-column:1 / -1}
+  .desk{grid-template-columns:minmax(0,1fr);padding:20px 16px 72px;min-height:0}
+  .term{margin:20px 0 0 0}
+  .trust .thead{grid-column:1 / -1}
+  .tgrid{grid-template-columns:1fr}
+  .ft-sign,.ft-cols{grid-column:1 / -1}.ft-cols{margin-top:56px}.ft-main{padding-top:56px;padding-bottom:64px}
+}
+@media (max-width:560px){
+  body{font-size:16px;line-height:26px}
+  :root{--t-lead:19px;--t-hero:11.4vw}
+  .lead{line-height:28px}
+  .top{height:68px}
+  .brand{font-size:21px}.brand img{width:28px;height:28px}
+  .nav .gh{padding:10px 12px}
+  .nav .gh .txt{display:none}
+  .cmd{padding-left:14px}
+  .cmd code{font-size:13px}
+  .cmd .ps{margin-right:8px}
+  .copy{padding:0 12px}
+  .copy .lbl{display:none}
+  .hero-art .pill{transform:scale(.9);transform-origin:100% 0}
+  .hero-art .tchip{font-size:11px;line-height:19px;width:88%}
+  .hero-art .tchip .tbody{padding:10px 12px 12px}
+  .hero-art .tchip .chip{font-size:10px;line-height:16px;padding:0 4px}
+  .browser .body{padding:14px;gap:10px}
+  .term{margin:16px 0 0 0}
+  .term .tb{font-size:12px;line-height:18px;padding:12px;min-height:220px}
+  .term .hello{padding:6px 10px}
+  .controls{padding:14px 14px 16px}
+  .btns{width:100%}.btns .btn{flex:1;justify-content:center;padding:0 10px}
+  .btns .btn.quiet{flex:0 0 auto}
+  .steps{grid-template-columns:1fr}
+  .steps{gap:12px}.step{padding:24px}
+  .step .vis{padding-top:24px;height:auto}
+  .foot{flex-direction:column;text-align:center;gap:20px}
+  .foot .sign-block{align-items:center}
+  .foot .meta{padding-left:0}
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   MOTION — reveal on scroll; everything off with reduced motion
+   ════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: no-preference){
+  .rv{opacity:0;transform:translateY(12px);transition:opacity 520ms var(--ease-out-strong),transform 520ms var(--ease-out-strong)}
+  .rv.in{opacity:1;transform:none}
+}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  .seal svg{animation:none}
+  .caret{animation:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Arco glyph sprites (UI_KIT §2). Master 64 for the pill, 18pt@2x template for the menu bar. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="arco64-outline" viewBox="0 -2 64 64">
+      <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12.74 27 A19.33 19.33 0 1 1 51.26 27" stroke-width="1.6"/>
+        <path d="M12 22 L16.42 52.04 Q17 56 21 56 H43 Q47 56 47.58 52.04 L52 22" stroke-width="3.2"/>
+        <path d="M10 22 H54" stroke-width="3.2"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="wrap top">
+  <a class="brand" href="#top" aria-label="Bucket, back to top"><img src="assets/icon-64.png" srcset="assets/icon-64.png 1x, assets/icon-128.png 2x" width="32" height="32" alt=""><span>bucket<span class="dotc">.</span></span></a>
+  <nav class="nav" aria-label="Primary">
+    <a href="#demo">Demo</a>
+    <a href="#how">How it works</a>
+    <a href="#install">Install</a>
+    <a class="gh" href="https://github.com/geheime/bucket"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .32.21.7.82.58A12 12 0 0 0 12 .3"/></svg><span class="txt">View on GitHub</span></a>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- ═══════════════════════ HERO ═══════════════════════ -->
+<section class="wrap grid hero" aria-labelledby="hero-title">
+  <div class="hero-copy">
+    <p class="kicker"><span class="dot" aria-hidden="true"></span>Visual context for AI coding agents</p>
+    <h1 id="hero-title"><span class="l">Capture anything.</span> <span class="l">Paste <span class="ev">everything.</span></span></h1>
+    <p class="lead">Take screenshots the way you always do. They fall into a bucket. Press <kbd>⌘V</kbd> in your terminal and Claude&nbsp;Code attaches every one as an image.</p>
+    <div class="cta">
+      <div class="cta-row">
+        <a class="btn-get" href="#install">Get Bucket for macOS <span class="arrow" aria-hidden="true">↘</span></a>
+        <a class="btn-second" href="https://github.com/geheime/bucket">View on GitHub <span class="arrow" aria-hidden="true">↗</span></a>
+      </div>
+      <p class="or-brew">or <button class="copy-link" type="button" data-copy-from="agent-md" aria-label="Copy install instructions for your agent"><span class="lbl"><span class="idle">copy install instructions for your agent</span><span class="done">Copied. Paste them into your agent.</span></span></button></p>
+    </div>
+    <p class="avail">Open source, MIT. Runs on macOS 14 Sonoma or later.</p>
+  </div>
+  <div class="hero-art" aria-hidden="true">
+    <picture>
+      <img src="assets/bucket-3d-1120.webp" srcset="assets/bucket-3d-560.webp 560w, assets/bucket-3d-1120.webp 1120w" sizes="(max-width: 860px) 78vw, 520px" width="1120" height="1120" alt="" fetchpriority="high">
+    </picture>
+    <div class="pill static">
+      <span class="pg"><svg class="g64" data-n="3" viewBox="0 -2 64 64"><g class="gl"><use href="#arco64-outline"/><path class="s s0" d="M20.36 47.6 H43.64 L43.11 51.2 H20.89 Z"/><path class="s s1" d="M19.39 41 H44.61 L44.08 44.6 H19.92 Z"/><path class="s s2" d="M18.42 34.4 H45.58 L45.05 38 H18.95 Z"/><path class="s sf" d="M17.98 31.4 H46.02 L43.11 51.2 H20.89 Z"/></g></svg></span>
+      <span class="pl"><span>3 in bucket</span></span>
+    </div>
+    <div class="tchip"><div class="tbar"><span class="dots"><i></i><i></i><i></i></span><span>~/shop — claude</span></div><div class="tbody"><span class="pr">&gt;</span> <span class="chip">[Image #1]</span> <span class="chip">[Image #2]</span> <span class="chip">[Image #3]</span> fix this<span class="caret"></span></div></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ DEMO ═══════════════════════ -->
+<section class="sec bone" id="demo" aria-labelledby="demo-title">
+  <div class="wrap">
+    <div class="grid sec-head rv">
+      <div>
+        <p class="kicker"><span class="dot" aria-hidden="true"></span>Try it</p>
+        <h2 class="h2" id="demo-title">Show Claude&nbsp;Code<br>what you see.</h2>
+      </div>
+      <p>Capture from any window, then press Paste in the terminal. The paths land on one line, Claude&nbsp;Code attaches them as images and the bucket empties itself.</p>
+    </div>
+
+    <div class="demo rv">
+      <div class="stage" id="stage" aria-hidden="true">
+        <div class="mbar">
+          <div class="app"><span id="appname">Safari</span><span>File</span><span>Edit</span><span>View</span></div>
+          <div class="right">
+            <span class="si"><svg id="mglyph" viewBox="0 0 36 36" data-n="0"><path fill="currentColor" fill-rule="evenodd" d="M5.5 15 H30.5 L27 34 H9 Z M7.5 15 H28.5 L25.5 32 H10.5 Z"/><rect fill="currentColor" x="3" y="11" width="30" height="3" rx="1.5"/><path d="M7 11 A11.22 11.22 0 0 1 29 11" fill="none" stroke="currentColor" stroke-width="2.5"/><g fill="currentColor"><rect class="m1" x="12" y="28" width="12" height="2"/><rect class="m2" x="12" y="24" width="12" height="2"/><rect class="m3" x="11" y="20" width="14" height="2"/><path class="mf" d="M10 17 H26 L23.5 30 H12.5 Z"/></g></svg></span>
+            <span class="ghost"></span>
+            <span>9:41</span>
+          </div>
+        </div>
+
+        <div class="desk">
+          <div class="win browser" id="browser">
+            <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">localhost:5173/checkout</span></div>
+            <div class="body">
+              <div class="err" data-target="0"><b>Unhandled Runtime Error</b>TypeError: Cannot read properties of undefined (reading 'total')<br><span style="opacity:.7">at Summary (Cart.tsx:42:18)</span></div>
+              <div class="card" data-target="1">
+                <h4>Order summary</h4>
+                <div class="row"><span>Subtotal</span><b>$48.00</b></div>
+                <div class="row"><span>Shipping</span><b>$6.00</b></div>
+                <div class="pay">Pay now</div>
+              </div>
+              <div class="card" data-target="2">
+                <h4>Weekly orders</h4>
+                <div class="chart"><i style="height:38%"></i><i style="height:52%"></i><i style="height:44%"></i><i style="height:92%"></i><i style="height:61%"></i><i style="height:70%"></i></div>
+                <div class="cap">Orders per day</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="win term" id="term">
+            <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">~/shop — claude</span></div>
+            <div class="tb">
+              <div class="hello"><b>✻</b> Claude Code <span class="dim">· ~/shop</span></div>
+              <div id="hist"></div>
+              <div class="box"><span class="gt">&gt;</span><span class="in" id="tin"></span><span class="caret"></span></div>
+              <div class="hint dim">? for shortcuts</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sel" id="sel"><span class="dim" id="seldim"></span></div>
+
+        <div class="pointer" id="pointer">
+          <svg class="arrow" viewBox="0 0 18 26"><path d="M2 1.5v19.2l4.6-4.4 3 7.1 3.1-1.3-3-7h6.4z" fill="#000" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          <svg class="cross" viewBox="0 0 22 22"><path d="M11 1v20M1 11h20" stroke="#fff" stroke-width="3"/><path d="M11 1v20M1 11h20" stroke="#000" stroke-width="1.2"/></svg>
+          <div class="pill" id="pill">
+            <span class="pg" id="pg"><svg class="g64" id="pglyph" data-n="0" viewBox="0 -2 64 64"><g class="gl" id="pgl"><use href="#arco64-outline"/><path class="s s0" d="M20.36 47.6 H43.64 L43.11 51.2 H20.89 Z"/><path class="s s1" d="M19.39 41 H44.61 L44.08 44.6 H19.92 Z"/><path class="s s2" d="M18.42 34.4 H45.58 L45.05 38 H18.95 Z"/><path class="s sf" d="M17.98 31.4 H46.02 L43.11 51.2 H20.89 Z"/></g></svg></span>
+            <span class="pl" id="pl"><span class="cur" id="plc">Empty bucket</span><span class="alt" id="pla"></span></span>
+          </div>
+        </div>
+
+        <div class="kc keys" id="kc"></div>
+      </div>
+
+      <div class="controls">
+        <p class="status" id="status" role="status" aria-live="polite">The bucket is empty. Press Capture.</p>
+        <div class="btns">
+          <button class="btn" type="button" id="b-cap">Capture <kbd>⌘⇧4</kbd></button>
+          <button class="btn primary" type="button" id="b-paste">Paste <kbd>⌘V</kbd></button>
+          <button class="btn quiet" type="button" id="b-replay" aria-label="Replay the whole story"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Replay</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ WORKFLOW ═══════════════════════ -->
+<section class="sec" id="how" aria-labelledby="how-title">
+  <div class="wrap grid flow">
+    <div class="rv" style="grid-column:1 / -1">
+      <p class="kicker"><span class="dot" aria-hidden="true"></span>How it works</p>
+      <h2 class="h2" id="how-title">Capture. Collect.<br>Paste. Empty.</h2>
+      <p class="support">A clipboard with memory. Not a screenshot editor, not a document manager.</p>
+    </div>
+        <ol class="steps rv" style="list-style:none;padding:0;margin-bottom:0">
+      <li class="step">
+        <span class="num">01</span>
+        <h3>Capture</h3>
+        <p>Press <kbd>⌘⇧4</kbd> and select an area. The selection is the native macOS one.</p>
+        <div class="vis"><div class="keys onpaper" aria-hidden="true"><span class="key">⌘</span><span class="key">⇧</span><span class="key">4</span></div></div>
+      </li>
+      <li class="step">
+        <span class="num">02</span>
+        <h3>Collect</h3>
+        <p>Take as many as you need. The menu bar icon and the panel show what is in the bucket.</p>
+        <div class="vis" aria-hidden="true"><div class="pill static"><span class="pg"><svg class="g64" data-n="3" viewBox="0 -2 64 64"><g class="gl"><use href="#arco64-outline"/><path class="s s0" d="M20.36 47.6 H43.64 L43.11 51.2 H20.89 Z"/><path class="s s1" d="M19.39 41 H44.61 L44.08 44.6 H19.92 Z"/><path class="s s2" d="M18.42 34.4 H45.58 L45.05 38 H18.95 Z"/><path class="s sf" d="M17.98 31.4 H46.02 L43.11 51.2 H20.89 Z"/></g></svg></span><span class="pl"><span>3 in bucket</span></span></div></div>
+      </li>
+      <li class="step">
+        <span class="num">03</span>
+        <h3>Paste</h3>
+        <p><kbd>⌘V</kbd> in the terminal pastes the paths of every screenshot on one line. Claude&nbsp;Code attaches them as images.</p>
+        <div class="vis" aria-hidden="true"><div class="tline"><span class="pr">&gt;</span><span class="chip">[Image #1]</span><span class="chip">[Image #2]</span><span class="chip">[Image #3]</span></div></div>
+      </li>
+      <li class="step">
+        <span class="num">04</span>
+        <h3>Empty</h3>
+        <p>When the paste happens, the bucket empties itself. <kbd>⌥⇧V</kbd> puts the last batch back on the clipboard.</p>
+        <div class="vis" aria-hidden="true"><div class="pill static"><span class="pg"><svg class="g64" data-n="0" viewBox="0 -2 64 64"><g class="gl"><use href="#arco64-outline"/></g></svg></span><span class="pl"><span>Pasted 3</span></span></div></div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ═══════════════════════ CLAUDE CODE ═══════════════════════ -->
+<section class="sec bone" id="claude-code" aria-labelledby="cc-title">
+  <div class="wrap grid">
+    <div class="cc-copy rv">
+      <p class="kicker"><span class="dot" aria-hidden="true"></span>Made for the terminal</p>
+      <h2 class="h2" id="cc-title">Built around Claude&nbsp;Code.</h2>
+      <p class="lead">You work with a terminal agent and show it what you see: an error, a layout, a chart, a settings screen.</p>
+      <p class="body">Bucket pastes plain file paths on one line, separated by spaces, and Claude&nbsp;Code turns every one into an image. A path with spaces or shell characters is quoted the way Finder does it, so it cannot run anything. Tested in iTerm2 with Claude&nbsp;Code.</p>
+    </div>
+    <div class="cc-vis rv" aria-hidden="true">
+      <div class="tw">
+        <div class="tbar"><span class="dots"><i></i><i></i><i></i></span><span>~/shop — claude</span></div>
+        <div class="tbody">
+          <div class="dim">⌘V pastes:</div>
+          <div class="paths">/Users/you/Bucket/2026-10-24/2026-10-24_14-32-07_a3f1.png /Users/you/Bucket/2026-10-24/2026-10-24_14-32-41_0c9e.png /Users/you/Bucket/2026-10-24/2026-10-24_14-33-05_7b24.png</div>
+          <div class="dim" style="margin-top:14px">Claude Code shows:</div>
+          <div class="box"><span class="dim">&gt;</span> <span class="chip">[Image #1]</span> <span class="chip">[Image #2]</span> <span class="chip">[Image #3]</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid memory" id="memory">
+      <div class="mem-copy rv">
+        <p class="kicker"><span class="dot" aria-hidden="true"></span>Memory</p>
+        <h2 class="h2">Every screenshot stays findable.</h2>
+        <p class="lead">Ask your agent for the screenshot where it said “invoice total”, and it finds it. The OCR runs on your Mac.</p>
+        <p class="body">A Claude&nbsp;Code skill in the repo teaches the agent to run <code>Bucket search</code>, a local command that only reads. It searches by the text in the screenshot or by the app that was in front, and returns the file path so the agent can open the image itself. No MCP server.</p>
+      </div>
+      <div class="mem-vis rv" aria-hidden="true">
+        <div class="tw">
+          <div class="tbar"><span class="dots"><i></i><i></i><i></i></span><span>~/shop — claude</span></div>
+          <div class="tbody">
+            <div><span class="dim">&gt;</span> find the screenshot where it said invoice total</div>
+            <div class="tool">⏺ <b>Bash</b>(Bucket search 'invoice total' --json)</div>
+            <div class="out">[{"path": "/Users/you/Bucket/2026-10-23/2026-10-23_17-05-12_4be0.png",<br>&nbsp;&nbsp;"frontApp": "Safari",<br>&nbsp;&nbsp;"snippet": "Invoice total $54.00"}]</div>
+            <div class="tool">⏺ <b>Read</b>(2026-10-23_17-05-12_4be0.png)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <details class="also rv">
+      <summary><h3>Outside the terminal, too.</h3><span class="tg" aria-hidden="true"></span></summary>
+      <div class="also-body">
+        <p>Bucket lays out the clipboard for the app in front. Browsers get one image per screenshot, and other apps get each screenshot as a file and as an image. Tested with claude.ai and chatgpt.com in Safari, and with the Claude and ChatGPT desktop apps.</p>
+        <p class="fine">In those desktop apps the bucket does not empty itself: they read the clipboard before you paste. Clear it from the menu or the panel. Other terminals (Terminal, Ghostty, Warp, VS Code, Cursor…) are expected to behave like iTerm2, and other terminal agents may accept plain paths; neither is tested or promised yet.</p>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ═══════════════════════ INSTALL (ink) ═══════════════════════ -->
+<section class="closing sec" id="install" aria-labelledby="install-title">
+  <div class="wrap grid install">
+    <div class="ihead rv">
+      <p class="kicker"><span class="dot" aria-hidden="true"></span>Install</p>
+      <h2 class="h2" id="install-title">Get Bucket.</h2>
+      <p class="lead">One line in your terminal.</p>
+      <div class="agent-cta">
+        <div class="cmd">
+          <code><span class="ps" aria-hidden="true">$</span>brew install geheime/tap/bucket</code>
+          <button class="copy" type="button" data-copy="brew install geheime/tap/bucket" aria-label="Copy the install command">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            <span class="lbl"><span class="idle">Copy</span><span class="done">Copied</span></span>
+          </button>
+        </div>
+        <div class="sec-actions">
+          <a class="btn-out" href="https://github.com/geheime/bucket">View on GitHub <span aria-hidden="true">↗</span></a>
+          <a class="btn-out" href="https://github.com/geheime/bucket/releases/latest">Latest release <span aria-hidden="true">↗</span></a>
+          <button class="btn-out copy-agent" type="button" data-copy-from="agent-md" aria-label="Copy instructions for your agent"><span class="lbl"><span class="idle">Copy instructions for your agent</span><span class="done">Copied. Paste into your agent.</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <ol class="launch rv">
+      <li class="lt" style="display:block;border:0;padding:0;counter-increment:none">First launch</li>
+      <li><div><b>Open Anyway, if you used the zip.</b><span>The zip is not notarized, so macOS blocks it the first time. Go to System Settings › Privacy &amp; Security and click Open Anyway.</span></div></li>
+      <li><div><b>Allow Screen Recording.</b><span>macOS asks the first time you capture. Turn it on and capture again.</span></div></li>
+      <li><div><b>Free ⌘⇧4.</b><span>macOS owns that shortcut. Untick it in System Settings › Keyboard › Keyboard Shortcuts › Screenshots, or pick ⌘⇧2 or ⌥⇧2 in the Bucket menu.</span></div></li>
+    </ol>
+
+
+
+  </div>
+</section>
+
+<!-- ═══════════════════════ TRUST (magenta tint) ═══════════════════════ -->
+<section class="tinted sec" id="trust" aria-labelledby="trust-title">
+    <div class="wrap grid trust">
+      <div class="thead rv">
+        <p class="kicker"><span class="dot" aria-hidden="true"></span>Open source</p>
+        <h2 class="h2" id="trust-title">Trust is part of the&nbsp;product.</h2>
+        <p class="tsub">An app that sees your screen should say exactly what it does with it. Here it is, short.</p>
+      </div>
+      <div class="tgrid rv">
+        <details class="tgl"><summary><h3>No MCP server. No network. Just the clipboard.</h3><span class="tg" aria-hidden="true"></span></summary><p>Bucket hands your agent file paths through the clipboard, and the agent searches with a local command. No connections, no accounts, no analytics, no update checker. The OCR runs on the device.</p></details>
+        <details class="tgl"><summary><h3>Read every line.</h3><span class="tg" aria-hidden="true"></span></summary><p>MIT licensed, the code is short and has no third-party dependencies. Building from source is the real anchor of trust.</p></details>
+        <details class="tgl"><summary><h3>Screen Recording, nothing else.</h3><span class="tg" aria-hidden="true"></span></summary><p>No Accessibility, no Input Monitoring. Bucket does not read your keystrokes; the shortcuts use the system hotkey API.</p></details>
+        
+        <details class="tgl"><summary><h3>Everything stays in <code>~/Bucket</code>.</h3><span class="tg" aria-hidden="true"></span></summary><p>Nothing is deleted on its own. The OCR text is stored in the clear, so whatever was on screen ends up there. Turn on FileVault.</p></details>
+        <details class="tgl"><summary><h3>Not notarized. Said plainly.</h3><span class="tg" aria-hidden="true"></span></summary><p>Signed ad-hoc, with no Apple Developer ID. The first launch needs Open Anyway, and the zip should match the hash in the release text.</p></details>
+        <details class="tgl"><summary><h3>Your settings stay yours.</h3><span class="tg" aria-hidden="true"></span></summary><p>Bucket does not edit macOS settings. You turn off the native ⌘⇧4 yourself.</p></details>
+      </div>
+      <p class="more rv"><a class="link" href="https://github.com/geheime/bucket#privacy-and-security">Read the full privacy and security notes&nbsp;↗</a></p>
+    </div>
+</section>
+
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <div class="grid ft-main">
+      <p class="ft-sign">Just buckit<span class="dotc">.</span></p>
+      <div class="ft-cols">
+        <div>
+          <p class="ft-h">Project</p>
+          <ul>
+            <li><a href="https://github.com/geheime/bucket">GitHub</a></li>
+            <li><a href="https://github.com/geheime/bucket/releases/latest">Releases</a></li>
+            <li><a href="https://github.com/geheime/bucket#readme">README</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="ft-h">License</p>
+          <ul>
+            <li>Open source</li>
+            <li><a href="https://github.com/geheime/bucket/blob/main/LICENSE">MIT License</a></li>
+            <li>© 2026 Sebastián Vizzo</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="ft-base">
+      <a class="brand" href="#top" aria-label="Bucket, back to top"><span>bucket<span class="dotc">.</span></span></a>
+      <div class="foot">
+        <button type="button" class="seal" id="seal-btn" aria-haspopup="dialog" aria-label="See the authorship record of the signature">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <defs><path id="sealpath" d="M60,60 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"/></defs>
+            <text class="ring-text"><textPath href="#sealpath" startOffset="0%">Authorship record · Verified on Bitcoin · </textPath></text>
+          </svg>
+          <span class="core" aria-hidden="true"></span><span class="core-glass" aria-hidden="true"></span>
+        </button>
+        <div class="sign-block">
+          <p class="sign">— Designed by Humans · Built by Intelligence</p>
+          <span class="meta">BAST · Rosario, Argentina · 2026</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Record of authorship — what the seal opens (canonical BAST footer) -->
+<div class="acta-backdrop" id="acta-backdrop"></div>
+<div class="acta-modal" id="acta-modal" role="dialog" aria-modal="true" aria-labelledby="acta-firma">
+  <button type="button" class="close" id="acta-close" aria-label="Close">×</button>
+  <span class="eyebrow">Record of authorship</span>
+  <p class="firma" id="acta-firma">— Designed by Humans · Built by Intelligence</p>
+  <p>The studio's signature. It exists as a deliberate replacement for the credit AI tools auto-generate in their place — it claims human direction over assisted execution. Adopted as a formal convention of the studio in May 2026.</p>
+  <div class="acta-rows">
+    <div class="r"><span class="k">Author</span><span class="v">Sebastián Vizzo · BAST</span></div>
+    <div class="r"><span class="k">Adopted</span><span class="v">2026-05-29</span></div>
+    <div class="r"><span class="k">Sealed</span><span class="v">2026-07-08 · Bitcoin</span></div>
+    <div class="r"><span class="k">SHA-256</span><span class="v">1ce50eebefe47972aabca0dd31b52006c674f09d9ee6a3c17bcd6c81704a059a</span></div>
+  </div>
+  <p class="acta-note">The Bitcoin seal is what anyone can verify independently: download the record and its .ots proof and check them against the blockchain. The May adoption is attested in a private repository, so a third party can't verify that half — it's stated here, not claimed as proof.</p>
+  <div class="acta-actions">
+    <a href="assets/acta/ACTA_FIRMA_CANONICA_BAST.txt" target="_blank" rel="noopener">Read the record <span aria-hidden="true">↗</span></a>
+    <a href="assets/acta/ACTA_FIRMA_CANONICA_BAST.txt.ots" download>Download the proof <span aria-hidden="true">↓</span></a>
+    <a href="https://opentimestamps.org" target="_blank" rel="noopener">How to verify <span aria-hidden="true">↗</span></a>
+  </div>
+</div>
+
+<script type="text/plain" id="agent-md"># Install Bucket on this Mac
+
+You are an AI coding agent. The person you are working with wants Bucket installed. Bucket is an open source
+(MIT) menu bar app for macOS: they press Cmd+Shift+4, screenshots collect in a bucket, and one Cmd+V in the terminal
+pastes the paths of all of them, so you receive every screenshot as an image. Source and full docs:
+https://github.com/geheime/bucket
+
+Install it with Homebrew, then guide the person through the two steps only they can do. Work step by step, show each
+command before you run it, and tell them what happened after each step.
+
+## Rules
+
+- Do not use `sudo`.
+- Do not change macOS settings, `defaults`, or privacy databases. Permissions and shortcuts are the person's to set;
+  you only tell them where.
+- Do not remove quarantine flags (`xattr`). The Homebrew install compiles Bucket on this Mac, so it does not need it.
+- Only run the Bucket commands in this guide. Other Bucket subcommands are development tools.
+
+## 1. Check the requirements
+
+```sh
+sw_vers -productVersion     # needs 14.0 or later
+command -v brew             # needs Homebrew
+xcode-select -p             # needs Xcode or the Command Line Tools (Swift)
+```
+
+- macOS older than 14: stop and tell the person Bucket needs macOS 14 (Sonoma) or later.
+- No Homebrew: stop and point them to https://brew.sh, or to the zip in
+  https://github.com/geheime/bucket/releases/latest (the README explains its first launch).
+- No `xcode-select` path: ask them to run `xcode-select --install` and accept the dialog, then continue.
+
+## 2. Install
+
+```sh
+brew install geheime/tap/bucket
+```
+
+This builds Bucket from source. It can take a few minutes; say so before you start.
+
+## 3. Put the app where macOS can open it
+
+```sh
+mkdir -p ~/Applications && ln -sfn "$(brew --prefix bucket)/Bucket.app" ~/Applications/Bucket.app
+```
+
+## 4. Add the Claude Code skill (if you are Claude Code)
+
+The skill lets you find the person's old screenshots by the text in them. Ask before installing it:
+
+```sh
+mkdir -p ~/.claude/skills
+cp -R "$(brew --prefix bucket)/share/bucket/integrations/claude-code/bucket-search" ~/.claude/skills/
+```
+
+Suggest a narrow permission, so you can search and nothing else:
+`Bash(~/Applications/Bucket.app/Contents/MacOS/Bucket search:*)`
+
+## 5. Open Bucket
+
+```sh
+open ~/Applications/Bucket.app
+```
+
+A bucket icon appears in the menu bar. There is no Dock icon.
+
+## 6. Guide the person through the two steps only they can do
+
+Tell them, in your own words:
+
+1. **Turn off the macOS Cmd+Shift+4 shortcut.** System Settings > Keyboard > Keyboard Shortcuts... > Screenshots >
+   untick "Save picture of selected area as a file". (Or keep it and pick another shortcut in Bucket's menu, under
+   Capture shortcut.)
+2. **Allow Screen Recording.** Press Cmd+Shift+4 and select any area. macOS asks for Screen Recording: turn Bucket on
+   in System Settings > Privacy & Security > Screen Recording, come back and capture again. While the permission is
+   missing, the menu bar icon is struck through.
+
+## 7. Test it together
+
+Ask them to capture two areas with Cmd+Shift+4, then click into this terminal and press Cmd+V. You should receive
+both screenshots as images. Describe what you see in them so they know it works. The bucket empties itself after
+the paste.
+
+## 8. Tell them what to know
+
+- Screenshots live in `~/Bucket`, with the text read from them (on this Mac, with Apple Vision) stored in the clear.
+  Nothing is deleted automatically. FileVault is the best protection for it.
+- Bucket makes no network connections and has no accounts or analytics.
+- Opt+Shift+V puts the last batch back on the clipboard.
+- Every `brew upgrade` rebuilds the app, and macOS may ask for Screen Recording again.
+</script>
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   Copy buttons · reveal · seal
+   ════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  document.querySelectorAll('.copy,.copy-mini,.copy-link,.btn-agent,.copy-agent').forEach(function(b){
+    var t;
+    b.addEventListener('click', function(){
+      var text = b.dataset.copyFrom ? document.getElementById(b.dataset.copyFrom).textContent : b.dataset.copy;
+      var label = b.getAttribute('aria-label');
+      var done = function(){ b.classList.add('is-done'); b.setAttribute('aria-label','Copied'); clearTimeout(t); t = setTimeout(function(){ b.classList.remove('is-done'); b.setAttribute('aria-label', label); }, b.dataset.copyFrom ? 2400 : 1200); };
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+      function fallback(){ var ta=document.createElement('textarea'); ta.value=text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); done(); }
+    });
+  });
+
+  var rv = document.querySelectorAll('.rv');
+  if ('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }); }, {threshold:.12, rootMargin:'0px 0px -6% 0px'});
+    rv.forEach(function(el){ io.observe(el); });
+  } else rv.forEach(function(el){ el.classList.add('in'); });
+
+  var core = document.querySelector('.seal .core');
+  if (core && !matchMedia('(prefers-reduced-motion: reduce)').matches && window.CSS && CSS.registerProperty){ core.style.animation = 'foilCycle 9s linear infinite'; }
+  var btn = document.getElementById('seal-btn'), modal = document.getElementById('acta-modal'), back = document.getElementById('acta-backdrop'), close = document.getElementById('acta-close');
+  var lastFocus = null;
+  function open(){ lastFocus = document.activeElement; modal.classList.add('is-open'); back.classList.add('is-open'); document.body.style.overflow='hidden'; close.focus(); }
+  function shut(){ modal.classList.remove('is-open'); back.classList.remove('is-open'); document.body.style.overflow=''; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+  btn.addEventListener('click', open); close.addEventListener('click', shut); back.addEventListener('click', shut);
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && modal.classList.contains('is-open')) shut(); });
+})();
+
+/* ════════════════════════════════════════════════════════════════════
+   DEMO — capture → collect → paste → empty
+   States, texts and timings from UI_KIT.md §4.1 (absorb), §4.2 (compact),
+   §4.3 (release, "soltar adentro"), §4.4 (keycaps). Paste format: bare
+   paths on one line with a trailing space (Exporter.swift). Theater
+   (cursor travel, selection, window focus) is staging only.
+   Any new action snaps the running one to its final state (§4 "nada
+   bloquea input").
+   ════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var RM = matchMedia('(prefers-reduced-motion: reduce)');
+  var E = { outStrong:'cubic-bezier(.16,1,.3,1)', outQuart:'cubic-bezier(.25,1,.5,1)', inOutQuart:'cubic-bezier(.76,0,.24,1)', inQuart:'cubic-bezier(.5,0,.75,0)', glide:'cubic-bezier(.45,0,.25,1)', spring:'cubic-bezier(.34,1.56,.64,1)' };
+  var $ = function(id){ return document.getElementById(id); };
+  var stage=$('stage'), pointer=$('pointer'), pill=$('pill'), pg=$('pg'), pglyph=$('pglyph'), pgl=$('pgl'), plc=$('plc'), pla=$('pla'),
+      sel=$('sel'), seldim=$('seldim'), kc=$('kc'), mglyph=$('mglyph'), appname=$('appname'), tin=$('tin'), hist=$('hist'),
+      browser=$('browser'), term=$('term'), status=$('status');
+  var arrow = pointer.querySelector('.arrow'), cross = pointer.querySelector('.cross');
+  var stripes = [pglyph.querySelector('.s0'), pglyph.querySelector('.s1'), pglyph.querySelector('.s2')];
+
+  /* model */
+  var M = { count:0, img:1, pill:'hidden', input:null, typed:'', history:[], x:0, y:0, cap:0, pasted:0 };
+  var gen = 0, timers = [];
+  var DAY = '2026-10-24';
+  var IDS = ['14-32-07_a3f1','14-32-41_0c9e','14-33-05_7b24','14-33-52_e81d','14-34-10_52fa','14-34-38_9d07'];
+
+  function begin(){ gen++; timers.forEach(clearTimeout); timers=[]; stage.getAnimations({subtree:true}).forEach(function(a){ a.cancel(); }); snap(); return gen; }
+  function wait(ms){ return new Promise(function(r){ timers.push(setTimeout(r, ms)); }); }
+  function anim(el, kf, o){ return el.animate(kf, Object.assign({fill:'none'}, o)); }
+
+  /* ── geometry ───────────────────────────────────────────── */
+  function rel(el){ var s=stage.getBoundingClientRect(), r=el.getBoundingClientRect(); return {x:r.left-s.left, y:r.top-s.top, w:r.width, h:r.height}; }
+  function setPointer(x,y){ M.x=x; M.y=y; pointer.style.transform='translate('+x+'px,'+y+'px)'; }
+  function moveTo(x,y,dur){
+    var fx=M.x, fy=M.y; setPointer(x,y);
+    if (RM.matches || !dur) return Promise.resolve();
+    return anim(pointer, [{transform:'translate('+fx+'px,'+fy+'px)'},{transform:'translate('+x+'px,'+y+'px)'}], {duration:dur, easing:E.glide}).finished.catch(function(){});
+  }
+
+  /* ── pill ───────────────────────────────────────────────── */
+  var meas = document.createElement('span'); meas.className='pl'; meas.style.cssText='position:absolute;visibility:hidden;margin:0;white-space:nowrap'; stage.appendChild(meas);
+  function textW(t){ meas.textContent=t; return Math.ceil(meas.getBoundingClientRect().width); }
+  function wExpanded(t){ return 4+30+6+textW(t)+14; }
+  function wCompact(t){ return 4+24+4+textW(t)+10; }
+  function countText(n){ return n===0 ? 'Empty bucket' : n+' in bucket'; }
+  function glyphN(n){ return n>=4 ? 'full' : String(n); }
+  function side(w){ var sw=stage.clientWidth; var k=parseFloat(getComputedStyle(stage).getPropertyValue('--pill-scale'))||1; var flip = M.x + 18 + w*k + 8 > sw; pointer.classList.toggle('flip', flip); return flip; }
+  function pillShape(mode, text){
+    var compact = mode==='compact';
+    var w = compact ? wCompact(text) : wExpanded(text);
+    pill.style.width = w+'px'; pill.style.height = (compact?32:38)+'px'; pill.style.borderRadius = (compact?16:19)+'px';
+    pill.style.paddingRight = (compact?10:14)+'px';
+    pg.style.transform = compact ? 'scale(.8)' : ''; pg.style.transformOrigin='0 50%';
+    pg.style.marginRight = compact ? '-6px' : '';
+    document.getElementById('pl').style.marginLeft = compact ? '4px' : '6px';
+    plc.textContent = text; pla.textContent=''; pla.style.opacity=0; plc.style.opacity=1;
+    side(w);
+    return w;
+  }
+  function setGlyph(n){ pglyph.setAttribute('data-n', glyphN(n)); }
+  function setMenubar(n){ mglyph.setAttribute('data-n', glyphN(n)); paintMenubar(); }
+  function paintMenubar(){
+    var n = mglyph.getAttribute('data-n');
+    var on = {m1: n==='1'||n==='2'||n==='3', m2: n==='2'||n==='3', m3: n==='3', mf: n==='full'};
+    Object.keys(on).forEach(function(k){ mglyph.querySelector('.'+k).style.opacity = on[k] ? 1 : 0; });
+  }
+  function bounceMenubar(){ if (RM.matches) return; anim(mglyph, [{transform:'scale(1)'},{transform:'scale(1.25)',offset:.45},{transform:'scale(1)'}], {duration:260, easing:E.spring}); }
+
+  /* ── keycaps ────────────────────────────────────────────── */
+  function keycaps(keys){
+    kc.innerHTML = keys.map(function(k){ return '<span class="key">'+k+'</span>'; }).join('');
+    if (RM.matches){ anim(kc, [{opacity:0},{opacity:1,offset:.15},{opacity:1,offset:.85},{opacity:0}], {duration:1200, easing:'linear'}); return; }
+    anim(kc, [
+      {opacity:0, transform:'translateX(-50%) translateY(-6px) scale(.96)', easing:E.outStrong},
+      {opacity:1, transform:'translateX(-50%) translateY(0) scale(1)', offset:.12},
+      {opacity:1, transform:'translateX(-50%) translateY(0) scale(1)', offset:.84, easing:E.outStrong},
+      {opacity:0, transform:'translateX(-50%) translateY(2px) scale(.98)'}
+    ], {duration:1150});
+    kc.querySelectorAll('.key').forEach(function(k){ anim(k, [{transform:'none'},{transform:'scale(.92) translateY(1px)',offset:.5},{transform:'none'}], {duration:150, delay:150, easing:E.outQuart}); });
+  }
+
+  /* ── terminal ───────────────────────────────────────────── */
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  function chipsHTML(list){ return list.map(function(n){ return '<span class="chip">[Image #'+n+']</span>'; }).join(''); }
+  function renderTerm(){
+    hist.innerHTML = M.history.map(function(h){ return '<div class="hist">&gt; '+h+'</div>'; }).join('');
+    if (!M.input){ tin.innerHTML = ''; return; }
+    if (M.input.kind==='paths') tin.innerHTML = '<span class="p paths">'+esc(M.input.paths.join(' '))+' </span>';
+    else tin.innerHTML = chipsHTML(M.input.imgs) + '<span class="p">'+esc(M.typed)+'</span>';
+  }
+  function commitInput(){
+    if (!M.input) return;
+    M.history.push(chipsHTML(M.input.imgs) + ' ' + esc(M.typed));
+    if (M.history.length>1) M.history.shift();
+    M.input=null; M.typed='';
+  }
+
+  /* ── static state from the model (used after any interruption) ── */
+  function snap(){
+    sel.style.opacity=0; kc.style.opacity=0; cross.style.opacity=0; arrow.style.opacity=1;
+    setMenubar(M.count); setGlyph(M.count);
+    pgl.style.transform=''; pg.style.translate=''; stripes.forEach(function(s){ s.style.transform=''; s.style.removeProperty('opacity'); });
+    if (M.count>0){ pillShape('compact', String(M.count)); pill.style.opacity=1; M.pill='compact'; }
+    else { pill.style.opacity=0; M.pill='hidden'; }
+    pill.style.transform='';
+    if (M.input && M.input.kind==='paths') M.input = {kind:'chips', imgs:M.input.imgs};
+    renderTerm();
+  }
+  function say(t){ status.textContent = t; }
+  function focusWin(w){ browser.classList.toggle('front', w===browser); term.classList.toggle('front', w===term); appname.textContent = w===term ? 'iTerm2' : 'Safari'; }
+
+  /* ════ CAPTURE ════ */
+  function capture(){
+    var g = begin();
+    var targets = stage.querySelectorAll('[data-target]');
+    var t = targets[M.cap % targets.length]; M.cap++;
+    var r = rel(t), pad = 6;
+    var x0 = r.x - pad, y0 = r.y - pad, x1 = r.x + Math.min(r.w, stage.clientWidth - r.x - 12) + pad, y1 = r.y + r.h + pad;
+    focusWin(browser);
+    if (M.input){ commitInput(); renderTerm(); }
+    return moveTo(x0, y0, 480).then(function(){
+      if (g!==gen) return;
+      /* ⌘⇧4: every Bucket window is ordered out before screencapture (§8.1-4) */
+      pill.style.opacity = 0; arrow.style.opacity = 0; cross.style.opacity = 1;
+      sel.style.transform = 'translate('+x0+'px,'+y0+'px)'; sel.style.opacity = 1;
+      seldim.textContent = Math.round((x1-x0)*2)+' × '+Math.round((y1-y0)*2);
+      var dur = RM.matches ? 0 : 520;
+      sel.style.width = (x1-x0)+'px'; sel.style.height = (y1-y0)+'px';
+      if (dur){ anim(sel, [{width:'0px',height:'0px'},{width:(x1-x0)+'px',height:(y1-y0)+'px'}], {duration:dur, easing:E.glide}); }
+      return moveTo(x1, y1, dur).then(function(){ return wait(RM.matches ? 300 : 140); });
+    }).then(function(){
+      if (g!==gen) return;
+      /* selection ends → the shot is in the bucket. t = 0 of absorb (§4.1) */
+      sel.style.opacity = 0; cross.style.opacity = 0; arrow.style.opacity = 1;
+      var before = M.count; M.count++;
+      say(M.count + ' in bucket. Capture more, or press Paste.');
+      keycaps(['⌘','⇧','4']);
+      var oldText = countText(before), newText = countText(M.count);
+      var w0 = wExpanded(oldText), w1 = wExpanded(newText);
+      pillShape('expanded', oldText); setGlyph(before); M.pill='expanded';
+      if (RM.matches){
+        pillShape('expanded', newText); setGlyph(M.count); setMenubar(M.count);
+        pill.style.opacity=1; anim(pill, [{opacity:0},{opacity:1}], {duration:160, easing:'linear'});
+        return wait(1500);
+      }
+      pill.style.opacity = 1;
+      anim(pill, [{opacity:0, transform:'translateY(-4px)'},{opacity:1, transform:'none'}], {duration:180, easing:E.outStrong});
+      /* squash 120 / 420, anchored 50% · 92% */
+      pgl.style.transformOrigin = '50% 92%';
+      anim(pgl, [{transform:'scale(1,1)'},{transform:'scale(1.08,.90)',offset:.2},{transform:'scale(.97,1.04)',offset:.48},{transform:'scale(1.01,.99)',offset:.74},{transform:'scale(1,1)'}], {duration:420, delay:120, easing:'linear'});
+      return wait(180).then(function(){
+        if (g!==gen) return;
+        /* new stripe grows 180 / 260 · count crossfade 180 / 160 · width follows */
+        setGlyph(M.count);
+        var idx = Math.min(M.count,3) - 1;
+        if (M.count<=3) anim(stripes[idx], [{transform:'scaleY(0)',opacity:.4},{transform:'scaleY(1.25)',opacity:1,offset:.6},{transform:'scaleY(1)',opacity:1}], {duration:260, easing:E.outStrong});
+        pla.textContent = newText;
+        anim(plc, [{opacity:1},{opacity:0}], {duration:160, easing:'linear', fill:'forwards'});
+        anim(pla, [{opacity:0},{opacity:1}], {duration:160, easing:'linear', fill:'forwards'});
+        anim(pill, [{width:w0+'px'},{width:w1+'px'}], {duration:200, easing:E.outStrong});
+        pill.style.width = w1+'px'; side(w1);
+        return wait(260);
+      }).then(function(){
+        if (g!==gen) return;
+        plc.getAnimations().forEach(function(a){ a.cancel(); }); pla.getAnimations().forEach(function(a){ a.cancel(); });
+        plc.textContent = newText; plc.style.opacity=1; pla.textContent=''; pla.style.opacity=0;
+        setMenubar(M.count); bounceMenubar();   /* 440 */
+        return wait(1500);
+      });
+    }).then(function(){
+      if (g!==gen) return;
+      compact();
+    });
+  }
+
+  /* compact 240 inOutQuart (§4.2) */
+  function compact(){
+    if (M.count===0) return;
+    var t = countText(M.count), wE = wExpanded(t), wC = wCompact(String(M.count));
+    if (RM.matches){ pillShape('compact', String(M.count)); M.pill='compact'; return; }
+    anim(plc, [{opacity:1},{opacity:0}], {duration:120, easing:'linear', fill:'forwards'}).finished.then(function(){
+      pillShape('compact', String(M.count)); M.pill='compact';
+      plc.getAnimations().forEach(function(a){ a.cancel(); });
+      anim(plc, [{opacity:0},{opacity:1}], {duration:120, easing:'linear'});
+    }).catch(function(){});
+    anim(pill, [{width:wE+'px',height:'38px',borderRadius:'19px'},{width:wC+'px',height:'32px',borderRadius:'16px'}], {duration:240, easing:E.inOutQuart});
+    anim(pg, [{transform:'scale(1)'},{transform:'scale(.8)'}], {duration:240, easing:E.inOutQuart});
+  }
+
+  /* ════ PASTE ════ */
+  function paste(){
+    if (M.count===0){ say(M.pasted ? 'The bucket is empty. Capture again, or ⌥⇧V re-copies the last batch.' : 'Nothing in the bucket yet. Press Capture first.'); return Promise.resolve(); }
+    var g = begin();
+    var n = M.count;
+    focusWin(term);
+    var box = rel(term.querySelector('.box'));
+    var tx = Math.min(box.x + box.w*0.42, stage.clientWidth - 40), ty = box.y + box.h + 10;
+    return moveTo(tx, ty, 520).then(function(){
+      if (g!==gen) return;
+      /* ⌘V — t = 0 of release (§4.3) */
+      if (M.input){ commitInput(); }
+      var imgs = [], paths = [];
+      for (var i=0;i<n;i++){ imgs.push(M.img+i); paths.push('/Users/you/Bucket/'+DAY+'/'+DAY+'_'+IDS[(M.img+i-1)%IDS.length]+'.png'); }
+      M.img += n; M.input = {kind:'paths', imgs:imgs, paths:paths}; M.typed=''; renderTerm();
+      keycaps(['⌘','V']);
+      var doneMsg = 'Pasted ' + n + '. Claude Code attached ' + (n===1?'it as an image':'them as images') + ', and the bucket is empty.';
+      M.count = 0; M.pasted = n;
+      var pText = 'Pasted '+n, wP = wExpanded(pText);
+
+      if (RM.matches){
+        pillShape('expanded', pText); setGlyph(0); setMenubar(0);
+        anim(pill, [{opacity:0},{opacity:1}], {duration:160, easing:'linear'});
+        M.input = {kind:'chips', imgs:imgs}; renderTerm();
+        return wait(700+160).then(function(){ if (g!==gen) return; say(doneMsg); anim(pill, [{opacity:1},{opacity:0}], {duration:160, easing:'linear'}); return wait(160); }).then(function(){ if (g!==gen) return; pill.style.opacity=0; M.pill='hidden'; });
+      }
+
+      /* 0: expand (if compact) · text off 120 */
+      var wasCompact = M.pill==='compact';
+      var wE = wExpanded(countText(n)), wC = wCompact(String(n));
+      pillShape('expanded', countText(n)); plc.style.opacity = 0; M.pill='expanded';
+      pg.style.transform='';
+      setGlyph(n);
+      if (wasCompact){
+        anim(pill, [{width:wC+'px',height:'32px',borderRadius:'16px'},{width:wE+'px',height:'38px',borderRadius:'19px'}], {duration:200, easing:E.outStrong});
+        anim(pg, [{transform:'scale(.8)'},{transform:'scale(1)'}], {duration:200, easing:E.outStrong});
+      } else {
+        anim(plc, [{opacity:1},{opacity:0}], {duration:120, easing:'linear'});
+      }
+      var flip = pointer.classList.contains('flip');
+      var dx = Math.round(wE/2 - (4+15));
+      var tilt = flip ? 45 : -45;   /* pill right of the cursor → counter-clockwise */
+      return wait(200).then(function(){
+        if (g!==gen) return;
+        /* 200: glyph slides to the centre (200 outQuart) */
+        anim(pg, [{transform:'translateX(0)'},{transform:'translateX('+dx+'px)'}], {duration:200, easing:E.outQuart, fill:'forwards'});
+        return wait(200);
+      }).then(function(){
+        if (g!==gen) return;
+        /* 400: tilt toward the cursor, anchor 50% · 90% (220 inOutQuart). With N>3 the full block becomes 3 stripes, hidden by the turn */
+        if (n>3) pglyph.setAttribute('data-n','3');
+        pgl.style.transformOrigin = '50% 90%';
+        anim(pgl, [{transform:'rotate(0deg)'},{transform:'rotate('+tilt+'deg)'}], {duration:220, easing:E.inOutQuart, fill:'forwards'});
+        return wait(220);
+      }).then(function(){
+        if (g!==gen) return;
+        /* 620 / 735 / 850: stripes empty, top first (160 outStrong) */
+        var k = Math.min(n,3);
+        for (var j=0;j<k;j++){
+          (function(s, d){ anim(s, [{opacity:1, transform:'scaleY(1)'},{opacity:0, transform:'scaleY(.4)'}], {duration:160, delay:d, easing:E.outStrong, fill:'forwards'}); })(stripes[k-1-j], j*115);
+        }
+        /* theater: Claude Code turns the pasted paths into image chips */
+        timers.push(setTimeout(function(){ if (g!==gen) return; M.input = {kind:'chips', imgs:M.input.imgs}; renderTerm(); tin.querySelectorAll('.chip').forEach(function(c,i){ anim(c, [{opacity:0, transform:'translateY(2px)'},{opacity:1, transform:'none'}], {duration:200, delay:i*40, easing:E.outStrong, fill:'backwards'}); }); }, 360));
+        return wait(420);
+      }).then(function(){
+        if (g!==gen) return;
+        /* 1040: back upright, empty (240 inOutQuart) */
+        pglyph.setAttribute('data-n','0');
+        stripes.forEach(function(s){ s.getAnimations().forEach(function(a){ a.cancel(); }); });
+        pgl.getAnimations().forEach(function(a){ a.cancel(); });
+        anim(pgl, [{transform:'rotate('+tilt+'deg)'},{transform:'rotate(0deg)'}], {duration:240, easing:E.inOutQuart});
+        return wait(120);
+      }).then(function(){
+        if (g!==gen) return;
+        /* 1160: back to its place · "Pasted N" (200 outQuart · crossfade 160) */
+        pg.getAnimations().forEach(function(a){ a.cancel(); });
+        anim(pg, [{transform:'translateX('+dx+'px)'},{transform:'translateX(0)'}], {duration:200, easing:E.outQuart});
+        anim(pill, [{width:wE+'px'},{width:wP+'px'}], {duration:200, easing:E.outQuart});
+        pill.style.width = wP+'px';
+        plc.textContent = pText; plc.style.opacity = 1;
+        anim(plc, [{opacity:0},{opacity:1}], {duration:160, easing:'linear'});
+        return wait(120);
+      }).then(function(){
+        if (g!==gen) return;
+        /* 1280: relief bounce (300 outStrong) */
+        pgl.style.transformOrigin = '50% 100%';
+        anim(pgl, [{transform:'none'},{transform:'translateY(-3px) scale(1.03,.98)',offset:.4},{transform:'scale(.99,1.01)',offset:.75},{transform:'none'}], {duration:300, easing:E.outStrong});
+        return wait(780);
+      }).then(function(){
+        if (g!==gen) return;
+        /* 2060: leaves in place, no flight (200 inOutQuart) · menu bar bounces to empty */
+        anim(pill, [{opacity:1, transform:'scale(1)'},{opacity:0, transform:'scale(.92)'}], {duration:200, easing:E.inOutQuart, fill:'forwards'});
+        pill.style.transformOrigin = '50% 50%';
+        setMenubar(0); bounceMenubar();
+        say(doneMsg);
+        return wait(220);
+      }).then(function(){
+        if (g!==gen) return;
+        pill.getAnimations().forEach(function(a){ a.cancel(); });
+        pill.style.opacity = 0; pill.style.transformOrigin=''; M.pill='hidden';
+        return type(g, 'the total is undefined, fix it');
+      });
+    });
+  }
+  function type(g, text){
+    var i = 0;
+    return new Promise(function(res){
+      (function step(){
+        if (g!==gen) return res();
+        if (i>text.length) return res();
+        M.typed = text.slice(0, i++); renderTerm();
+        timers.push(setTimeout(step, 28));
+      })();
+    });
+  }
+
+  /* ════ autoplay story · controls ════ */
+  var auto = 0;
+  function story(){
+    var a = ++auto;
+    var steps = [capture, capture, capture, function(){ return wait(1700); }, paste];
+    return steps.reduce(function(p, f){ return p.then(function(){ if (a!==auto) return; return Promise.resolve(f()).then(function(){ return a===auto ? wait(500) : null; }); }); }, Promise.resolve());
+  }
+  function reset(){
+    begin(); auto++;
+    M.count=0; M.img=1; M.input=null; M.typed=''; M.history=[]; M.cap=0; M.pasted=0;
+    focusWin(browser);
+    var b = rel(browser); setPointer(Math.round(b.x + b.w*0.62), Math.round(b.y + b.h*0.82));
+    snap(); say('The bucket is empty. Press Capture.');
+  }
+  var touched = false;
+  $('b-cap').addEventListener('click', function(){ touched = true; auto++; capture(); });
+  $('b-paste').addEventListener('click', function(){ touched = true; auto++; paste(); });
+  $('b-replay').addEventListener('click', function(){ touched = true; reset(); if (!RM.matches) story(); });
+
+  reset();
+  var rt; addEventListener('resize', function(){ clearTimeout(rt); rt = setTimeout(function(){ var x=Math.min(M.x, stage.clientWidth-30), y=Math.min(M.y, stage.clientHeight-30); begin(); auto++; setPointer(x,y); snap(); }, 150); });
+
+  /* plays once when it comes into view; never under reduced motion */
+  if (!RM.matches && 'IntersectionObserver' in window){
+    var seen = false;
+    var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting && !seen){ seen = true; io.disconnect(); setTimeout(function(){ if (!touched) story(); }, 400); } }); }, {threshold:.45});
+    io.observe(stage);
+  }
+})();
+</script>
+</body>
+</html>

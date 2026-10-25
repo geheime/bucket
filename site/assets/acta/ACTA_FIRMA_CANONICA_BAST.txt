@@ -1,0 +1,61 @@
+ACTA DE AUTORÍA — FIRMA CANÓNICA BAST
+========================================================================
+
+FRASE / FIRMA CANÓNICA DEL ESTUDIO
+------------------------------------------------------------------------
+
+        — Designed by Humans · Built by Intelligence
+
+(Forma canónica vigente: "Humans" e "Intelligence" con mayúscula inicial.
+ Forma original de adopción, mayo 2026: "Designed by humans · Built by
+ intelligence", en minúscula. La mayúscula se fija como canon posterior.)
+
+
+AUTOR
+------------------------------------------------------------------------
+Sebastián Vizzo — BAST estudio.
+Rosario, Argentina. GitHub: geheime · seba.vizzo@gmail.com
+
+
+ORIGEN
+------------------------------------------------------------------------
+La firma nace como reemplazo deliberado del crédito autogenerado por
+herramientas de IA ("Co-Authored-By: Claude" / "Generated with Claude
+Code") por una firma de obra propia del estudio, que reivindica la
+dirección humana sobre la ejecución asistida por inteligencia.
+
+Se adopta formalmente en el canon de Perla el 29 de mayo de 2026,
+mediante Pull Request público en GitHub.
+
+
+EVIDENCIA VERIFICABLE DE ANTERIORIDAD (registro de tercero)
+------------------------------------------------------------------------
+Repositorio : github.com/geheime/perla-canon
+Pull Request: #23 — "firma: adoptar la firma canónica del estudio en
+              todo el canon"
+URL         : https://github.com/geheime/perla-canon/pull/23
+PR abierto  : 2026-05-29T11:33:54Z  (timestamp de servidor GitHub)
+PR mergeado : 2026-05-29T13:34:20Z  (timestamp de servidor GitHub)
+
+Commit      : b529780938bc63832965a6f22151f154366a3076
+Rama        : firma/enmienda-canonica
+Fecha autor : 2026-05-29 08:33:31 -0300
+
+Los timestamps de apertura y merge del Pull Request son estampados por
+la infraestructura de GitHub y no son controlados por el autor, por lo
+que constituyen prueba independiente de que la firma existía, como
+convención formal del estudio, a más tardar el 29 de mayo de 2026.
+
+
+PROPÓSITO DE ESTE DOCUMENTO
+------------------------------------------------------------------------
+Este acta se ancla con OpenTimestamps (prueba criptográfica sobre la
+blockchain de Bitcoin) para dejar constancia independiente y descentra-
+lizada de su contenido a la fecha de sellado. El sellado NO reemplaza la
+evidencia de anterioridad de mayo de 2026 arriba citada: la complementa,
+fijando también el estado consolidado de la firma y su historia a la
+fecha de este registro.
+
+Fecha de emisión del acta: julio de 2026.
+
+— Designed by Humans · Built by Intelligence

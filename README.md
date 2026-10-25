@@ -43,6 +43,9 @@ The formula builds Bucket from source with the Swift toolchain (Xcode or Command
 last step to link the app into `~/Applications` (the formula cannot write to `/Applications`). Every
 `brew upgrade` builds a new ad-hoc signature, so macOS asks for Screen Recording again.
 
+Because Homebrew builds the app on your Mac, it is not quarantined, so the "Open Anyway" step in "First launch"
+should not be needed; that step is for the zip. (Not yet verified on a clean Mac.)
+
 ### Zip
 
 1. Download `Bucket-<version>.zip` from the [latest release](https://github.com/geheime/bucket/releases/latest).
@@ -169,7 +172,8 @@ screenshot from the bucket does not delete it from the archive.
 ## Privacy and security
 
 Bucket runs entirely on your Mac. It makes no network connections, has no accounts, no analytics and no update
-checker, and has no third-party dependencies. OCR uses Apple's Vision framework on the device. This section says what
+checker, and has no third-party dependencies. There is no MCP server and no local server of any kind: your agent gets
+file paths through the clipboard and searches with a local command. OCR uses Apple's Vision framework on the device. This section says what
 that means in practice, and what it does not cover.
 
 **What is stored, and for how long.** For every screenshot, `~/Bucket` keeps the untouched PNG, an optimized PNG and
