@@ -44,7 +44,8 @@ last step to link the app into `~/Applications` (the formula cannot write to `/A
 `brew upgrade` builds a new ad-hoc signature, so macOS asks for Screen Recording again.
 
 Because Homebrew builds the app on your Mac, it is not quarantined, so the "Open Anyway" step in "First launch"
-should not be needed; that step is for the zip. (Not yet verified on a clean Mac.)
+is not needed; that step is for the zip. (Checked on macOS 26.2 against the published tap, on a Mac that had
+run Bucket before, not a clean one.)
 
 ### Zip
 
@@ -56,6 +57,8 @@ should not be needed; that step is for the zip. (Not yet verified on a clean Mac
 Verify the download before you open it: compare `shasum -a 256 Bucket-<version>.zip` with the SHA-256 printed in the
 text of the release. The release also has `Bucket-<version>.zip.sha256`, and
 `shasum -a 256 -c Bucket-<version>.zip.sha256` should say `OK`.
+Safari unzips downloads by itself and deletes the zip, so to check it download the zip with
+`curl -LO https://github.com/geheime/bucket/releases/download/v<version>/Bucket-<version>.zip` instead.
 
 ### Build from source
 
@@ -83,6 +86,8 @@ Check the zip's SHA-256 against the release text first (see Privacy and security
 without it, macOS asks, and Bucket appears in System Settings > Privacy & Security > Screen Recording. Turn it on and
 capture again. Until then the menu bar icon is struck through and a capture shows a pill that takes you to that
 setting; when you come back, the icon clears by itself. If Bucket is not in the list, click + and choose Bucket.app.
+If you switch between the zip and the Homebrew copy, macOS sees a different signature: turn Bucket off and on again in
+that list (or remove it and add it back), then reopen Bucket.
 
 **Free the Cmd+Shift+4 shortcut.** macOS already owns Cmd+Shift+4 for its own area screenshot. Bucket registers the
 shortcut itself and does not change any system setting, so turn the native one off:
