@@ -20,9 +20,18 @@ enum Cli {
                bucket --help | --version
         """
 
+    /// The app bundle this binary lives in. Homebrew starts it through a `bucket` symlink, and then `Bundle.main` sees
+    /// the symlink's folder instead of the app, so the path is resolved first. Falls back to `Bundle.main`.
+    static let appBundle: Bundle = {
+        guard let exe = Bundle.main.executableURL?.resolvingSymlinksInPath() else { return .main }
+        let app = exe.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        guard app.pathExtension == "app", let bundle = Bundle(url: app) else { return .main }
+        return bundle
+    }()
+
     /// The bundle's short version, or "dev" when running a bare binary (swift run, a build without Info.plist).
     static var version: String {
-        (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "dev"
+        (appBundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "dev"
     }
 
     /// Another process that is this same app (same bundle id, or same executable when unbundled), if any.
@@ -30,7 +39,7 @@ enum Cli {
         let me = ProcessInfo.processInfo.processIdentifier
         return NSWorkspace.shared.runningApplications.first { app in
             guard app.processIdentifier != me, !app.isTerminated else { return false }
-            if let id = Bundle.main.bundleIdentifier { return app.bundleIdentifier == id }
+            if let id = appBundle.bundleIdentifier { return app.bundleIdentifier == id }
             return app.executableURL != nil && app.executableURL == Bundle.main.executableURL
         }
     }
