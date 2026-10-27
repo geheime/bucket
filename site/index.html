@@ -300,6 +300,7 @@ code,kbd,pre{font-family:var(--mono)}
 .step h3{font:700 var(--t-h3)/28px var(--sans);letter-spacing:-.03em;margin:16px 0 8px}
 .step p{margin:0;font-size:16px;line-height:26px;color:var(--muted);max-width:30ch}
 .step p kbd{font:600 .95em var(--sans);color:var(--ink)}
+.step p.fine{margin-top:10px;font-size:13px;line-height:20px}
 .step .vis{height:88px;display:flex;align-items:flex-end;margin-top:auto;padding-top:32px}
 .step .vis .tline{font:400 12px/20px var(--mono);background:#16161A;color:#E6E4E8;border-radius:10px;padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap}
 .step .vis .tline .pr{color:#8C8A92}
@@ -689,7 +690,8 @@ button.seal{display:block;padding:0;border:0;background:none;cursor:pointer;bord
       <li class="step">
         <span class="num">04</span>
         <h3>Empty</h3>
-        <p>When the paste happens, the bucket empties itself. <kbd>⌥⇧V</kbd> puts the last batch back on the clipboard.</p>
+        <p>When the paste happens, the bucket empties itself.* <kbd>⌥⇧V</kbd> puts the last batch back on the clipboard.</p>
+        <p class="fine">* Some desktop apps read the clipboard before you paste, so for now the bucket may not empty itself there. <kbd>⌥⇧X</kbd> empties it from anywhere.</p>
         <div class="vis" aria-hidden="true"><div class="pill static"><span class="pg"><svg class="g64" data-n="0" viewBox="0 -2 64 64"><g class="gl"><use href="#arco64-outline"/></g></svg></span><span class="pl"><span>Pasted 3</span></span></div></div>
       </li>
     </ol>

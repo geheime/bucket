@@ -5,10 +5,16 @@ All notable changes to Bucket are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-27
+
 ### Added
 - Opt+Shift+X clears the bucket. Some apps read the clipboard before the paste, so the bucket did not empty
   itself; now you can empty it from anywhere. The archive keeps every screenshot. The menu shows the shortcut next to
   **Clear bucket**.
+- Landing and agent prompt: a note on Opt+Shift+X for apps where the bucket does not empty itself.
+
+### Known issues
+- Capturing while Bucket's settings menu is open can still hang the crosshair. Close the menu first.
 
 ## [0.4.1] - 2026-10-27
 
