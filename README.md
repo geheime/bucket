@@ -36,16 +36,18 @@ source needs Xcode or the Command Line Tools with Swift 5.9 or later (tested wit
 ### Homebrew
 
 ```sh
-brew install geheime/tap/bucket
+brew install --cask geheime/tap/bucket
 ```
 
-The formula builds Bucket from source with the Swift toolchain (Xcode or Command Line Tools). It prints the
-last step to link the app into `~/Applications` (the formula cannot write to `/Applications`). Every
-`brew upgrade` builds a new ad-hoc signature, so macOS asks for Screen Recording again.
+The cask installs the prebuilt app from the latest release into `/Applications` and puts the `bucket` command on
+your PATH. It needs no Xcode. Bucket is not notarized, so the first launch needs **Open Anyway** once (see
+"First launch"). The Claude Code skill is in `$(brew --prefix)/Caskroom/bucket/<version>/integrations`.
 
-Because Homebrew builds the app on your Mac, it is not quarantined, so the "Open Anyway" step in "First launch"
-is not needed; that step is for the zip. (Checked on macOS 26.2 against the published tap, on a Mac that had
-run Bucket before, not a clean one.)
+The tap also has a formula, `brew install --formula geheime/tap/bucket`, that builds Bucket from source on your Mac.
+It needs Xcode or the Command Line Tools, and Homebrew stops if your Xcode is older than the one it expects for your
+macOS (Xcode 26 on macOS 26). The app stays inside Homebrew's folder, so you link it yourself:
+`mkdir -p ~/Applications && ln -sfn "$(brew --prefix bucket)/Bucket.app" ~/Applications/Bucket.app`.
+Every `brew upgrade` of the formula builds a new ad-hoc signature, so macOS asks for Screen Recording again.
 
 ### Zip
 
