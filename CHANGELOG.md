@@ -5,6 +5,11 @@ All notable changes to Bucket are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Opt+Shift+X clears the bucket. Some apps read the clipboard before the paste, so the bucket did not empty
+  itself; now you can empty it from anywhere. The archive keeps every screenshot. The menu shows the shortcut next to
+  **Clear bucket**.
+
 ## [0.4.1] - 2026-10-27
 
 ### Fixed

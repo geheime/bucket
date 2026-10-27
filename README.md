@@ -118,6 +118,7 @@ tells you at launch and in the menu.
 - **Send last to Desktop:** in the menu. Copies the original of the newest screenshot in the bucket to your Desktop
   and takes it out of the bucket. The archive keeps its copy.
 - **Remove from bucket / Clear bucket:** take screenshots out of the bucket without deleting them from the archive.
+  Opt+Shift+X clears the bucket from anywhere.
 - **Paste format** (menu): bare paths (default and recommended), numbered with prompt, @paths, or one path per line.
 - **Open archive:** opens `~/Bucket` in Finder.
 
@@ -261,6 +262,10 @@ and the web".
 **Why did the bucket empty itself?**
 That is the idea: once you paste, the batch is done. With the bucket empty, Opt+Shift+V puts the last batch back on
 the clipboard, and the screenshots are always in the archive.
+
+**I pasted and the bucket is still full.**
+Some apps read the clipboard before you paste (to preview it, for example), so Bucket never learns that the paste
+happened. Opt+Shift+X clears the bucket. Nothing is deleted from the archive.
 
 **Can I use my own shortcut?**
 Not yet. There are three presets in the menu (see above).
