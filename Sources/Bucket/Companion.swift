@@ -1,6 +1,7 @@
 import AppKit
 import BucketCore
 import QuartzCore
+import os
 
 /// Hosts the layer tree and tells the controller when the appearance changes.
 private final class CompanionHost: NSView {
@@ -21,7 +22,7 @@ final class Companion {
     var barShow: (_ bounce: Bool) -> Void = { _ in }
 
     private(set) var model: CompanionModel
-    private let panel = BucketPanel(size: CompanionPlacement.window)
+    private var panel = BucketPanel(size: CompanionPlacement.window)
     private let rig: PillRig
     private let host = CompanionHost()
     private let flight = BarFlight()
@@ -75,6 +76,10 @@ final class Companion {
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
             // Reduce Motion is read at each event; a change mid-event just lands on the final state.
             self?.interrupt()
+        }
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            guard let self, !self.headless, self.onScreen, !self.panel.isOnActiveSpace else { return }
+            self.rebuildPanel()
         }
     }
 
@@ -367,9 +372,24 @@ final class Companion {
         st.side = side
         rig.apply(st)
         applyWindowFrame()
-        if !headless { panel.orderFrontRegardless() }
+        if !headless {
+            panel.orderFrontRegardless()
+            if !panel.isOnActiveSpace { rebuildPanel() }
+        }
         onScreen = true
         updateTimer()
+    }
+
+    /// A full-screen app coming and going can leave the window tied to a few Spaces despite `.canJoinAllSpaces`: it is
+    /// ordered in but drawn on none the user is looking at, so the pill silently stops showing. A fresh window joins all Spaces again.
+    private func rebuildPanel() {
+        Logger(subsystem: "studio.bast.bucket", category: "spaces").notice("companion window off the active Space: rebuilt")
+        panel.orderOut(nil)
+        panel.contentView = nil
+        panel = BucketPanel(size: CompanionPlacement.window)
+        panel.contentView = host
+        applyWindowFrame()
+        panel.orderFrontRegardless()
     }
 
     private func applyWindowFrame() {
