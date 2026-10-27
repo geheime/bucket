@@ -18,8 +18,8 @@
 class Bucket < Formula
   desc "Menu bar app that hands your screenshots to your terminal AI agent"
   homepage "https://github.com/geheime/bucket"
-  url "https://github.com/geheime/bucket/archive/refs/tags/v0.4.0.tar.gz"
-  sha256 "4b5ce85dd8b3dcb03640b166ad0704ccf9421653750d07ccb939fdefe94519ec"
+  url "https://github.com/geheime/bucket/archive/refs/tags/v0.4.1.tar.gz"
+  sha256 "75b420e8d4ac8f805af7fdded020c61934349f9e85be3aa31a2dc3bd2cd708aa"
   license "MIT"
   head "https://github.com/geheime/bucket.git", branch: "main"
 
