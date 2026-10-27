@@ -43,6 +43,9 @@ The cask installs the prebuilt app from the latest release into `/Applications` 
 your PATH. It needs no Xcode. Bucket is not notarized, so the first launch needs **Open Anyway** once (see
 "First launch"). The Claude Code skill is in `$(brew --prefix)/Caskroom/bucket/<version>/integrations`.
 
+Bucket does not check for updates. To get a new version, run `brew upgrade --cask bucket`. The new copy has a new
+ad-hoc signature, so macOS may ask for **Open Anyway** and Screen Recording again.
+
 The tap also has a formula, `brew install --formula geheime/tap/bucket`, that builds Bucket from source on your Mac.
 It needs Xcode or the Command Line Tools, and Homebrew stops if your Xcode is older than the one it expects for your
 macOS (Xcode 26 on macOS 26). The app stays inside Homebrew's folder, so you link it yourself:

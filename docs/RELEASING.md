@@ -111,5 +111,14 @@ and the tag do not change.
 
 ## Next releases
 
-Bump the version in `CHANGELOG.md`, tag `vX.Y.Z`, run `scripts/package.sh X.Y.Z`, `gh release create`, then update `url`
-and `sha256` in the tap's formula. There is no auto-update in the app.
+Bump the version in `CHANGELOG.md`, tag `vX.Y.Z`, run `scripts/package.sh X.Y.Z`, `gh release create`, then update the
+tap. It holds two files and both change:
+
+- `Casks/bucket.rb`: `version "X.Y.Z"` and `sha256` of the zip (`cat dist/Bucket-X.Y.Z.zip.sha256`).
+- `Formula/bucket.rb`: `url` and `sha256` of the tag's source tarball (step 5). Copy it back to
+  `packaging/homebrew/bucket.rb` (step 6).
+
+Verify both: `brew upgrade --cask bucket` (or `brew install --cask geheime/tap/bucket` on a Mac without it),
+`brew audit --cask --strict geheime/tap/bucket`, and `brew upgrade --formula bucket` + `brew test geheime/tap/bucket`.
+
+There is no auto-update in the app: users update with `brew upgrade --cask bucket`.

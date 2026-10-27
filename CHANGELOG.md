@@ -5,8 +5,19 @@ All notable changes to Bucket are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-27
+
+### Fixed
+- The pill and the bucket could disappear until Bucket was restarted, after entering and leaving a full-screen app:
+  the companion window stayed on other Spaces. It is now rebuilt when it is found off the active Space.
+- `bucket --version` printed "dev" when run through the Homebrew `bucket` command. It now prints the real version.
+
 ### Changed
 - The menu toggle "Keep in menu bar" is now **Follow the cursor**, shown the other way round (on = the companion follows the cursor). Your setting is kept.
+- README: how to update with `brew upgrade --cask bucket`.
+
+### Known issues
+- Capturing while Bucket's settings menu is open can still hang the crosshair. Close the menu first.
 
 ## [0.4.0] - 2026-10-25
 
