@@ -50,7 +50,7 @@ public enum PanelMetrics {
 
 public enum PanelCopy {
     public static func title(_ count: Int) -> String { CompanionCopy.count(count) }
-    public static let copyNow = "Copy now", copied = "Copied", recopy = "Re-copy", recopyHint = "⌥⇧V"
+    public static let copyNow = "Copy now", copied = "Copied", recopy = "Re-copy", recopyHint = "⌥⇧V", clearHint = "⌥⇧X"
     public static let sendLast = "Send last to Desktop", clear = "Clear bucket"
     public static let remove = "Remove from bucket", showInFinder = "Show in Finder"
     public static let emptyHint = "to capture"

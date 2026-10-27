@@ -314,6 +314,7 @@ final class PillButton: NSView {
 /// A row of the actions block: 28 high, radius 6. Hover = `fill.control` instantly, like a menu. Disabled = no hover, no click.
 final class ActionRow: NSView {
     let title: String
+    let hint: String?
     var isEnabled = true { didSet { needsDisplay = true } }
     var forcedHover = false { didSet { needsDisplay = true } }
     var onClick: (() -> Void)?
@@ -322,7 +323,7 @@ final class ActionRow: NSView {
     override var isFlipped: Bool { true }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    init(_ title: String) { self.title = title; super.init(frame: .zero) }
+    init(_ title: String, hint: String? = nil) { self.title = title; self.hint = hint; super.init(frame: .zero) }
     required init?(coder: NSCoder) { nil }
 
     override func updateTrackingAreas() {
@@ -340,6 +341,11 @@ final class ActionRow: NSView {
             NSBezierPath(roundedRect: bounds, xRadius: 6, yRadius: 6).fill()
         }
         drawText(title, PanelFont.body, isEnabled ? .labelColor : .tertiaryLabelColor, in: bounds.insetBy(dx: 10, dy: 0))
+        if let hint { // right edge lines up with the ⌥⇧V hint on Re-copy
+            let hw = textWidth(hint, PanelFont.hint)
+            drawText(hint, PanelFont.hint, isEnabled ? .secondaryLabelColor : .tertiaryLabelColor,
+                     in: CGRect(x: bounds.width - 16 - hw, y: 0, width: hw + 2, height: bounds.height))
+        }
     }
     override func mouseDown(with event: NSEvent) { if isEnabled { onClick?() } }
 }
@@ -518,7 +524,7 @@ private final class LastBatchView: NSView {
 }
 
 private final class ActionsView: NSView {
-    let sendLast = ActionRow(PanelCopy.sendLast), clear = ActionRow(PanelCopy.clear)
+    let sendLast = ActionRow(PanelCopy.sendLast), clear = ActionRow(PanelCopy.clear, hint: PanelCopy.clearHint)
     override var isFlipped: Bool { true }
     override init(frame: NSRect) {
         super.init(frame: frame)

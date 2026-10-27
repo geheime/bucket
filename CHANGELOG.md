@@ -5,6 +5,9 @@ All notable changes to Bucket are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- The panel shows Opt+Shift+X next to **Clear bucket**, as it shows Opt+Shift+V next to **Re-copy**.
+
 ## [0.4.2] - 2026-10-27
 
 ### Added
