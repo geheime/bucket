@@ -30,6 +30,7 @@ final class StatusController: NSObject, NSMenuDelegate {
     private let menu = NSMenu()
     /// ⌥⇧V could not be registered (another app holds it): the menu says so, the panel's Re-copy button still works.
     private var recopyShortcutTaken = false
+    private var clearShortcutTaken = false
     /// How the clipboard is laid out, from the last non-system app that was frontmost.
     private var pasteMode: PasteMode = .terminal
 
@@ -115,8 +116,12 @@ final class StatusController: NSObject, NSMenuDelegate {
             self?.keycaps.show(.recopy, captureSymbols: Shortcut.capture.symbols) // ⌥⇧V always teaches itself
             self?.copyBatch()
         }
-        // One pill, not two: if both failed, the capture one wins (it is the shortcut the app is for); the menu names each.
-        if captureTaken || recopyShortcutTaken || nativeScreenshotConflict { companion.feedback(CompanionCopy.shortcutTaken) } // the menu keeps saying it
+        // ⌥⇧X empties the bucket by hand: some apps read the clipboard before the paste, so the promise never says "pasted".
+        clearShortcutTaken = !Hotkeys.register(id: 3, keyCode: kVK_ANSI_X, modifiers: optionKey | shiftKey) { [weak self] in
+            self?.clearFromShortcut()
+        }
+        // One pill, not two: if several failed, the capture one wins (it is the shortcut the app is for); the menu names each.
+        if captureTaken || recopyShortcutTaken || clearShortcutTaken || nativeScreenshotConflict { companion.feedback(CompanionCopy.shortcutTaken) } // the menu keeps saying it
     }
 
     /// Bucket's capture shortcut is Cmd+Shift+4 and the macOS one is still on: Carbon lets us register it, but macOS wins
@@ -297,6 +302,12 @@ final class StatusController: NSObject, NSMenuDelegate {
 
     @objc func clearBucket() { bucket.clear(); bucketShrank() }
 
+    /// ⌥⇧X: same as Clear bucket; with nothing in it, a beep (like ⌥⇧V with nothing to copy). The archive keeps every shot.
+    private func clearFromShortcut() {
+        guard bucket.count > 0 else { NSSound.beep(); return }
+        clearBucket()
+    }
+
     func removeShot(id: String) { bucket.remove(id: id); bucketShrank() }
 
     @objc func removeShot(_ sender: NSMenuItem) {
@@ -439,7 +450,12 @@ final class StatusController: NSObject, NSMenuDelegate {
                 row.submenu = sub
                 menu.addItem(row)
             }
-            menu.addItem(entry("Clear bucket", #selector(clearBucket)))
+            menu.addItem(entry("Clear bucket", #selector(clearBucket), key: "x"))
+        }
+        if clearShortcutTaken {
+            let taken = NSMenuItem(title: "⌥⇧X is taken by another app", action: nil, keyEquivalent: "")
+            taken.isEnabled = false
+            menu.addItem(taken)
         }
 
         menu.addItem(.separator())
