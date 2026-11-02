@@ -44,9 +44,9 @@ your PATH. It needs no Xcode. Bucket is not notarized, so the first launch needs
 "First launch"). The Claude Code skill is in `$(brew --prefix)/Caskroom/bucket/<version>/integrations`.
 
 Bucket does not check for updates. To get a new version, run `brew upgrade --cask bucket`. The new copy has a new
-ad-hoc signature, so macOS may ask for **Open Anyway** and Screen Recording again. If the menu bar icon stays struck
-through while Screen Recording looks on, that switch belongs to the old copy: remove Bucket from the list with the
-minus button, reopen Bucket and capture once to grant it again.
+ad-hoc signature, so macOS may ask for **Open Anyway** and Screen Recording again. If captures stop working, or the menu bar
+icon stays struck through, while Screen Recording looks on, that switch belongs to the old copy: remove Bucket from
+the list with the minus button, reopen Bucket and capture once to grant it again.
 
 If you installed Bucket earlier with `brew install --formula`, remove that copy first: quit Bucket, run
 `brew uninstall --formula bucket` and `rm ~/Applications/Bucket.app` (the link the formula asked you to make), then
