@@ -2007,5 +2007,22 @@ do {
           && N.selectedAreaEnabled(in: ["30": "x"]) == nil && N.selectedAreaEnabled(in: ["30": [:] as [String: Any]]) == nil)
 }
 
+// Fix wave · screencapture's ending: ESC is a cancel, a missing Screen Recording grant is not
+do {
+    typealias O = CaptureOutcome
+    check("capture outcome: ESC (exit 0, no file, empty stderr) -> cancelled", O.classify(status: 0, stderr: "", hasImage: false) == .cancelled)
+    check("capture outcome: exit 1 + could not create image from rect -> permissionDenied",
+          O.classify(status: 1, stderr: "could not create image from rect\n", hasImage: false) == .permissionDenied)
+    check("capture outcome: -x variant (from display) -> permissionDenied",
+          O.classify(status: 1, stderr: "could not create image from display\n", hasImage: false) == .permissionDenied)
+    check("capture outcome: exit 1 + any other stderr -> failed with that text",
+          O.classify(status: 1, stderr: "something else\n", hasImage: false) == .failed("something else"))
+    check("capture outcome: exit 1 + empty stderr -> failed (the status is named)",
+          O.classify(status: 1, stderr: "", hasImage: false) == .failed("screencapture exited with status 1"))
+    check("capture outcome: a good image wins over anything else", O.classify(status: 0, stderr: "", hasImage: true) == .captured
+          && O.classify(status: 1, stderr: "could not create image from rect", hasImage: true) == .captured)
+    check("capture outcome: exit 0 with an unreadable file is still a cancel", O.classify(status: 0, stderr: "noise", hasImage: false) == .cancelled)
+}
+
 print("PASS \(passed) · FAIL \(failed) · SKIP \(skipped)")
 exit(failed > 0 ? 1 : 0)

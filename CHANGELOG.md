@@ -11,6 +11,9 @@ All notable changes to Bucket are documented here. The format follows
   starts its own crosshair too; turn it off in System Settings > Keyboard > Keyboard Shortcuts > Screenshots.
 - With the menu open, Cmd+Shift+4 starts the capture when the menu closes, not before. The macOS crosshair was what
   you saw in the meantime.
+- After an update, System Settings can still show Screen Recording "on" for Bucket: that switch belongs to the
+  previous copy. The pill now says what to do (remove Bucket with − and give the permission again), and a capture
+  that fails for lack of permission no longer passes as a cancel.
 
 ## [0.4.3] - 2026-10-27
 
