@@ -13,8 +13,8 @@ public enum CompanionCopy {
     public static let shortcutTaken = "Shortcut taken"
     public static let permissionNeeded = "Screen Recording needed"
     /// Settings were already opened from the pill and the permission is still missing: the switch there belongs to an
-    /// older copy of Bucket (a new ad-hoc signature after an upgrade). Removing the entry lets macOS ask again.
-    public static let permissionStale = "Already on? Remove Bucket with \u{2212}"
+    /// older copy of Bucket (a new ad-hoc signature after an upgrade). Removing the entry and reopening Bucket lets macOS ask again (it asks once per process).
+    public static let permissionStale = "Already on? Remove Bucket with \u{2212}, then reopen it"
     public static let openSettings = "Open Settings…"
 }
 
