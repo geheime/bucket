@@ -35,8 +35,9 @@ public enum NativeShortcuts {
     }
 
     /// Reads `com.apple.symbolichotkeys` through CFPreferences (read only).
+    /// No `AppleSymbolicHotKeys` at all means the user never changed a system shortcut: every default is on, Cmd+Shift+4 too.
     public static func nativeAreaScreenshotEnabled() -> Bool? {
         let value = CFPreferencesCopyAppValue("AppleSymbolicHotKeys" as CFString, "com.apple.symbolichotkeys" as CFString)
-        return selectedAreaEnabled(in: value)
+        return selectedAreaEnabled(in: value ?? [String: Any]() as CFPropertyList)
     }
 }
