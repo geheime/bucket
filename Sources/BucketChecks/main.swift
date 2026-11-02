@@ -1365,6 +1365,7 @@ do {
     check("panel copy: OCR state follows the queue", PanelCopy.ocr(pending: 2) == "Reading 2 shots…" && PanelCopy.ocr(pending: 1) == "Reading 1 shot…" && PanelCopy.ocr(pending: 0) == "All shots searchable")
     check("panel copy: footer path abbreviates home", PanelCopy.savedIn(root: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Bucket"), day: "2026-10-24") == "~/Bucket/2026-10-24")
     check("panel copy: titles", PanelCopy.title(0) == "Empty bucket" && PanelCopy.title(3) == "3 in bucket" && PanelCopy.lastBatch(2) == "Last batch · 2" && CompanionCopy.sentToDesktop == "Sent to Desktop")
+    check("pill copy: permission needed, then stale after Settings", CompanionCopy.permissionNeeded == "Screen Recording needed" && CompanionCopy.permissionStale == "Already on? Remove Bucket with \u{2212}")
     let M = Motion.Panel.self
     check("motion: open 180 outStrong (.98 → 1, +4) · close 120 outQuart · hover 120 in / 80 out",
           M.open == .init(0, 180, .outStrong) && M.openScaleFrom == 0.98 && M.openRise == 4 && M.close == .init(0, 120, .outQuart)

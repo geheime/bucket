@@ -88,6 +88,7 @@ final class StatusController: NSObject, NSMenuDelegate {
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
             guard let self, self.permissionMissing, CGPreflightScreenCaptureAccess() else { return }
             self.permissionMissing = false
+            self.errorPill.granted()
             self.refreshIcon()
         }
         if let id = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
@@ -162,7 +163,7 @@ final class StatusController: NSObject, NSMenuDelegate {
         }
         // No permission: the error pill (the only clickable piece) instead of a capture that would come back empty.
         guard CGPreflightScreenCaptureAccess() else { requestScreenAccess(); permissionDenied(); return }
-        if permissionMissing { permissionMissing = false; refreshIcon() } // granted since the last attempt
+        if permissionMissing { permissionMissing = false; errorPill.granted(); refreshIcon() } // granted since the last attempt
 
         let frontApp = NSWorkspace.shared.frontmostApplication?.localizedName
         let frontBundleId = NSWorkspace.shared.frontmostApplication?.bundleIdentifier

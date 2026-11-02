@@ -16,6 +16,7 @@ enum PillRender {
         "pill-absorb@0.5": { png(dark: $0) { $0.absorbPose() } },
         "pill-release@0.5": { png(dark: $0) { $0.releasePose() } },
         "pill-error": { errorPNG(dark: $0) },
+        "pill-error-stale": { errorPNG(dark: $0, stale: true) }, // back from Settings, still missing
         "keycaps-capture": { keycapsPNG(["⌘", "⇧", "4"], dark: $0) },
         "keycaps-paste": { keycapsPNG(["⌘", "V"], dark: $0) },
         "keycaps-recopy": { keycapsPNG(["⌥", "⇧", "V"], dark: $0) },
@@ -76,9 +77,9 @@ enum PillRender {
     }
 
     /// Optional `pill-error`: wider than the reference canvas (the text and the link do not fit in 200 pt), same 64 pt of height.
-    static func errorPNG(dark: Bool) -> Data? {
+    static func errorPNG(dark: Bool, stale: Bool = false) -> Data? {
         let palette = PillPalette(dark: dark)
-        let built = ErrorPill.build(palette: palette, opaque: true)
+        let built = ErrorPill.build(palette: palette, opaque: true, stale: stale)
         let w = max(size.width, 26 + built.pill.width + 8)
         let root = CALayer()
         root.bounds = CGRect(x: 0, y: 0, width: w, height: size.height)

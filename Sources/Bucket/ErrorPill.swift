@@ -29,13 +29,16 @@ extension GlyphBitmap {
 /// The pill of the Screen Recording error: the ONE clickable piece of the companion. Another panel,
 /// nonactivating, that does not follow the cursor and does not leave by itself. It closes when the permission is granted,
 /// when "Open Settings…" is used, with ESC once it has been clicked (it never grabs focus on its own), or when a new
-/// capture starts.
+/// capture starts. Once it has sent the user to Settings, the next time the permission is still missing it says
+/// `permissionStale` instead: the switch they saw on belongs to an older copy.
 final class ErrorPill {
     static let settingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!
     static let pad: CGFloat = 24
 
     private var panel: BucketPanel?
     private var poll: Timer?
+    /// "Open Settings…" was used and the permission has not been granted since.
+    private var sentToSettings = false
     private var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
     /// Asks whether the permission is there now (injected so the pill does not know about CoreGraphics).
     var permissionGranted: () -> Bool = { false }
@@ -46,8 +49,8 @@ final class ErrorPill {
     var isShown: Bool { panel?.isVisible == true }
 
     /// Layers of the pill on its own coordinate space (y-down, origin at the pill's top-left + pad). `opaque` is for renders.
-    static func build(palette: PillPalette, opaque: Bool) -> (layer: CALayer, pill: CGRect, size: CGSize) {
-        let text = CompanionCopy.permissionNeeded, link = CompanionCopy.openSettings
+    static func build(palette: PillPalette, opaque: Bool, stale: Bool = false) -> (layer: CALayer, pill: CGRect, size: CGSize) {
+        let text = stale ? CompanionCopy.permissionStale : CompanionCopy.permissionNeeded, link = CompanionCopy.openSettings
         let tf = NSFont.systemFont(ofSize: 13, weight: .regular), lf = NSFont.systemFont(ofSize: 13, weight: .medium)
         let tw = PillFont.width(text, tf), lw = PillFont.width(link, lf)
         let w = 4 + PillRig.expandedGlyph + 6 + tw + 12 + lw + 14, h = CompanionPlacement.expandedHeight
@@ -106,7 +109,7 @@ final class ErrorPill {
         close()
         let dark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         let palette = PillPalette(dark: dark)
-        let built = ErrorPill.build(palette: palette, opaque: true)
+        let built = ErrorPill.build(palette: palette, opaque: true, stale: sentToSettings)
         let panel = BucketPanel(size: built.size, ignoresMouse: false)
         panel.acceptsKey = true
         panel.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
@@ -114,6 +117,7 @@ final class ErrorPill {
         host.wantsLayer = true
         host.onClick = { [weak self] in
             NSWorkspace.shared.open(ErrorPill.settingsURL)
+            self?.sentToSettings = true
             self?.close()
         }
         host.onEscape = { [weak self] in self?.close() }
@@ -136,11 +140,15 @@ final class ErrorPill {
         }
         let t = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             guard let self, self.permissionGranted() else { return }
+            self.granted()
             self.close(); self.onGranted()
         }
         RunLoop.main.add(t, forMode: .common)
         poll = t
     }
+
+    /// The permission is back (seen by the pill or by the status item): the next pill starts from "needed" again.
+    func granted() { sentToSettings = false }
 
     func close() {
         poll?.invalidate(); poll = nil
