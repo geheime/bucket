@@ -538,6 +538,19 @@ do {
     check("a successful switch frees the old combination", Hotkeys.register(id: 901, keyCode: c.key, modifiers: c.mods) {}
           && Hotkeys.registered(id: 901)?.keyCode == c.key && Hotkeys.register(id: 903, keyCode: a.key, modifiers: a.mods) {})
 
+    // Menu open: the capture hotkey is let go and taken back on the same combination (what menuWillOpen / menuDidClose do).
+    let held = Hotkeys.registered(id: 901)
+    Hotkeys.unregister(id: 901)
+    check("let go: nothing registered for the id, and the combination is free for anyone", Hotkeys.registered(id: 901) == nil
+          && Hotkeys.register(id: 904, keyCode: held!.keyCode, modifiers: held!.modifiers) {})
+    Hotkeys.unregister(id: 904)
+    check("taken back on the same combination: registered again, and held at Carbon",
+          Hotkeys.register(id: 901, keyCode: held!.keyCode, modifiers: held!.modifiers) {}
+          && Hotkeys.registered(id: 901)?.keyCode == held!.keyCode && !Hotkeys.register(id: 904, keyCode: held!.keyCode, modifiers: held!.modifiers) {})
+    check("taking it back when it is already ours (user switched meanwhile) is a no-op that says yes",
+          Hotkeys.register(id: 901, keyCode: held!.keyCode, modifiers: held!.modifiers) {})
+    Hotkeys.unregister(id: 904)
+
     // The preference follows the registration, never the other way round.
     var saved: [String] = []
     let kept = ShortcutSwitch.apply(wanted: "new", current: "old", register: { _ in false }, save: { saved.append($0) })

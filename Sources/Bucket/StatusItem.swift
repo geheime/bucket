@@ -20,6 +20,8 @@ final class StatusController: NSObject, NSMenuDelegate {
     /// The status-item menu is tracking (menuWillOpen → menuDidClose). A capture asked meanwhile waits for it to close.
     private var menuOpen = false
     private var capturePending = false
+    /// The global capture hotkey is let go while the menu tracks (see `menuWillOpen`) and taken back when it closes.
+    private var captureSuspended = false
 
     static let seedPosition = 400
     /// Fixed item width: the 18 pt glyph sits centered, no count text beside it.
@@ -132,7 +134,7 @@ final class StatusController: NSObject, NSMenuDelegate {
     }
 
     /// Nothing holds the capture combo (id 1): another app has it. Read from Carbon, so it also follows a later successful switch.
-    private var captureShortcutTaken: Bool { Hotkeys.registered(id: 1) == nil }
+    private var captureShortcutTaken: Bool { !captureSuspended && Hotkeys.registered(id: 1) == nil }
 
     private func registerCapture(_ sc: Shortcut) -> Bool {
         Hotkeys.register(id: 1, keyCode: sc.keyCode, modifiers: sc.modifiers, handler: { [weak self] in self?.capture() })
@@ -185,10 +187,25 @@ final class StatusController: NSObject, NSMenuDelegate {
         capture()
     }
 
-    func menuWillOpen(_ menu: NSMenu) { if menu === self.menu { menuOpen = true } }
+    /// While the menu tracks, a Carbon hotkey swallows Cmd+Shift+4 before the menu sees it (measured: nothing reaches the app until
+    /// the menu closes, and the system's own crosshair opens meanwhile). So the global one is let go for as long as the menu is
+    /// open: the "Capture" item has the same key equivalent, and it closes the menu and captures (`capture()` with `menuOpen`).
+    /// Only when we hold it: a combination another app took stays as it is.
+    func menuWillOpen(_ menu: NSMenu) {
+        guard menu === self.menu else { return }
+        menuOpen = true
+        if Hotkeys.registered(id: 1) != nil {
+            Hotkeys.unregister(id: 1)
+            captureSuspended = true
+        }
+    }
     func menuDidClose(_ menu: NSMenu) {
         guard menu === self.menu else { return }
         menuOpen = false
+        if captureSuspended { // same path as at launch and on a switch; it keeps what the user chose meanwhile (no-op if already ours)
+            captureSuspended = false
+            _ = registerCapture(Shortcut.capture)
+        }
         if capturePending { DispatchQueue.main.async { [weak self] in self?.resumeCapture() } } // one turn: the menu window is really gone
     }
 
