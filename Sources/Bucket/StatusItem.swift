@@ -245,7 +245,7 @@ final class StatusController: NSObject, NSMenuDelegate {
         case .cancelled:
             companion.cancelCapture()
         case .permissionDenied:
-            // The preflight said yes and screencapture still could not read the screen: same answer as a preflight in false.
+            // The net behind the preflight: screencapture could not read the screen. Same answer as a preflight in false.
             NSLog("Bucket: screencapture failed for lack of Screen Recording")
             companion.cancelCapture()
             requestScreenAccess()

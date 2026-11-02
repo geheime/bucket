@@ -3,7 +3,7 @@ import Foundation
 /// How a `screencapture -i` run ended, told from what it leaves behind. Measured on macOS 26 (spike, 02/11/2026):
 /// ESC = exit 0, no file, empty stderr. No Screen Recording permission (for example a new ad-hoc signature after an
 /// update while Settings still shows the switch on) = exit 1 and "could not create image from rect" on stderr
-/// (with -x, "...from display").
+/// (a full-screen run without -i says "...from display").
 public enum CaptureOutcome: Equatable {
     case captured
     case cancelled
