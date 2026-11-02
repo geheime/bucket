@@ -44,13 +44,13 @@ your PATH. It needs no Xcode. Bucket is not notarized, so the first launch needs
 "First launch"). The Claude Code skill is in `$(brew --prefix)/Caskroom/bucket/<version>/integrations`.
 
 Bucket does not check for updates. To get a new version, run `brew upgrade --cask bucket`. The new copy has a new
-ad-hoc signature, so macOS may ask for **Open Anyway** and Screen Recording again.
+ad-hoc signature, so macOS may ask for **Open Anyway** and Screen Recording again. If the menu bar icon stays struck
+through while Screen Recording looks on, that switch belongs to the old copy: remove Bucket from the list with the
+minus button, reopen Bucket and capture once to grant it again.
 
-The tap also has a formula, `brew install --formula geheime/tap/bucket`, that builds Bucket from source on your Mac.
-It needs Xcode or the Command Line Tools, and Homebrew stops if your Xcode is older than the one it expects for your
-macOS (Xcode 26 on macOS 26). The app stays inside Homebrew's folder, so you link it yourself:
-`mkdir -p ~/Applications && ln -sfn "$(brew --prefix bucket)/Bucket.app" ~/Applications/Bucket.app`.
-Every `brew upgrade` of the formula builds a new ad-hoc signature, so macOS asks for Screen Recording again.
+If you installed Bucket earlier with `brew install --formula`, remove that copy first: quit Bucket, run
+`brew uninstall --formula bucket` and `rm ~/Applications/Bucket.app` (the link the formula asked you to make), then
+install the cask. Two copies of Bucket fight over the shortcut and the permission.
 
 ### Zip
 
@@ -266,6 +266,11 @@ the clipboard, and the screenshots are always in the archive.
 **I pasted and the bucket is still full.**
 Some apps read the clipboard before you paste (to preview it, for example), so Bucket never learns that the paste
 happened. Opt+Shift+X clears the bucket. Nothing is deleted from the archive.
+
+**I have two Buckets.**
+Usually one from the old `brew install --formula` and one from the cask. Quit both, run `brew uninstall --formula bucket`,
+delete `~/Applications/Bucket.app` if it is there, then remove Bucket from System Settings > Privacy & Security > Screen
+Recording with the minus button, open the copy in `/Applications` and capture once to grant it again.
 
 **Can I use my own shortcut?**
 Not yet. There are three presets in the menu (see above).
