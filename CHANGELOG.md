@@ -5,6 +5,13 @@ All notable changes to Bucket are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- The menu now warns when the macOS Cmd+Shift+4 is on. The warning never showed: Bucket looked at the wrong system
+  setting (macOS keeps this shortcut as entry 30, and it is on until you turn it off). With that shortcut on, macOS
+  starts its own crosshair too; turn it off in System Settings > Keyboard > Keyboard Shortcuts > Screenshots.
+- With the menu open, Cmd+Shift+4 starts the capture when the menu closes, not before. The macOS crosshair was what
+  you saw in the meantime.
+
 ## [0.4.3] - 2026-10-27
 
 ### Changed

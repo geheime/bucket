@@ -1986,14 +1986,24 @@ do {
     insideBinaryChecks = false
 }
 
-// Fix wave · native Cmd+Shift+4 (symbolic hotkey 31) is read, never written
+// Fix wave · native Cmd+Shift+4 (symbolic hotkey 30; absent = on by default) is read, never written
 do {
     typealias N = NativeShortcuts
-    check("native shortcut: entry 31 enabled -> true", N.selectedAreaEnabled(in: ["31": ["enabled": true]]) == true)
-    check("native shortcut: entry 31 disabled -> false", N.selectedAreaEnabled(in: ["31": ["enabled": 0 as NSNumber]]) == false)
-    check("native shortcut: no dictionary, no entry 31 or a wrong shape -> nil (do nothing)",
-          N.selectedAreaEnabled(in: nil) == nil && N.selectedAreaEnabled(in: ["30": ["enabled": true]]) == nil
-          && N.selectedAreaEnabled(in: ["31": "x"]) == nil && N.selectedAreaEnabled(in: ["31": [:] as [String: Any]]) == nil)
+    let p: [String: Any] = ["parameters": [52, 21, 1_179_648], "type": "standard"]
+    check("native shortcut: entry 30 absent -> true (on by default)", N.selectedAreaEnabled(in: ["60": ["enabled": 0 as NSNumber]]) == true)
+    check("native shortcut: empty dictionary -> true (nothing turned it off)", N.selectedAreaEnabled(in: [String: Any]()) == true)
+    check("native shortcut: entry 30 enabled -> true", N.selectedAreaEnabled(in: ["30": ["enabled": true]]) == true)
+    check("native shortcut: entry 30 enabled 1 (NSNumber) -> true", N.selectedAreaEnabled(in: ["30": ["enabled": 1 as NSNumber]]) == true)
+    check("native shortcut: entry 30 disabled -> false", N.selectedAreaEnabled(in: ["30": ["enabled": 0 as NSNumber]]) == false)
+    check("native shortcut: the shape of a Mac with it turned off (30 and 31 disabled, same key) -> false",
+          N.selectedAreaEnabled(in: ["30": ["enabled": 0 as NSNumber, "value": p], "31": ["enabled": 0 as NSNumber, "value": p]]) == false)
+    check("native shortcut: 30 disabled but another entry enabled on Cmd+Shift+4 -> true",
+          N.selectedAreaEnabled(in: ["30": ["enabled": 0 as NSNumber, "value": p], "99": ["enabled": 1 as NSNumber, "value": p]]) == true)
+    check("native shortcut: an enabled entry on other keys does not count",
+          N.selectedAreaEnabled(in: ["30": ["enabled": 0 as NSNumber], "31": ["enabled": 1 as NSNumber, "value": ["parameters": [52, 21, 1_441_792]]]]) == false)
+    check("native shortcut: no dictionary or a wrong shape -> nil (do nothing)",
+          N.selectedAreaEnabled(in: nil) == nil && N.selectedAreaEnabled(in: "x") == nil
+          && N.selectedAreaEnabled(in: ["30": "x"]) == nil && N.selectedAreaEnabled(in: ["30": [:] as [String: Any]]) == nil)
 }
 
 print("PASS \(passed) · FAIL \(failed) · SKIP \(skipped)")
