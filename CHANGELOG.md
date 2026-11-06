@@ -3,13 +3,7 @@
 All notable changes to Bucket are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
-
-### Fixed
-- The bucket no longer empties by itself. Some apps read the clipboard for their own reasons (Safari does it when you
-  type an accent with Option+E), and Bucket took that as a paste. Now a read only counts as a paste if Cmd is held
-  down (Cmd+V) or you clicked a moment ago (Edit > Paste, the context menu) without Option. Any other read still gets
-  its data, and Bucket puts the clipboard back the way it was, so the real paste still empties the bucket.
+## [0.5.0] - 2026-11-06
 
 ### Added
 - **Screen recording.** Cmd+Shift+6 records a region of the screen. You drag the region on Bucket's own overlay (a click
@@ -27,6 +21,10 @@ All notable changes to Bucket are documented here. The format follows
 - No Screen Recording permission: a recording that ends without a file shows the same permission pill as a screenshot.
 
 ### Fixed
+- The bucket no longer empties by itself. Some apps read the clipboard for their own reasons (Safari does it when you
+  type an accent with Option+E), and Bucket took that as a paste. Now a read only counts as a paste if Cmd is held
+  down (Cmd+V) or you clicked a moment ago (Edit > Paste, the context menu) without Option. Any other read still gets
+  its data, and Bucket puts the clipboard back the way it was, so the real paste still empties the bucket.
 - The menu now warns when the macOS Cmd+Shift+4 is on. The warning never showed: Bucket looked at the wrong system
   setting (macOS keeps this shortcut as entry 30, and it is on until you turn it off). With that shortcut on, macOS
   starts its own crosshair too; turn it off in System Settings > Keyboard > Keyboard Shortcuts > Screenshots.
