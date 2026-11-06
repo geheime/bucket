@@ -291,6 +291,27 @@ code,kbd,pre{font-family:var(--mono)}
 @media (hover:hover) and (pointer:fine){.btn:hover{background:color-mix(in srgb,var(--panel) 80%,var(--ink) 6%)}.btn.primary:hover{background:color-mix(in srgb,var(--ink) 86%,var(--accent))}.btn.quiet:hover{background:none;color:var(--ink)}}
 .btn svg{width:16px;height:16px}
 
+/* ── RECORD (0.5) ─────────────────────────────────────────────────── */
+.rec-card{background:var(--surface)}
+/* Full magenta block, the exact brand #E7195E (same in light and dark). Headline white: large text, 4.47:1 (needs 3:1).
+   Eyebrow and body in pure black, 4.70:1 (AA); no greys: the darkest one (#19191B) gives 3.93:1, so the hierarchy is weight, not tone. */
+.magenta{background:#E7195E;color:#000000;--ink:#000000;--ink-2:#000000;--muted:#000000;--accent-ink:#000000;--hairline:rgba(0,0,0,.18)}
+.magenta .h2{color:#FFFFFF}
+.magenta .kicker .dot{background:#000000}
+.magenta .rec-card{box-shadow:0 0 0 1px rgba(0,0,0,.16),0 24px 60px rgba(80,0,30,.28)}
+.magenta .rec-pts li{color:#000000}
+.magenta .rec-pts kbd{font-weight:700}
+.magenta .rec-pts code{color:#000000;background:rgba(255,255,255,.22);padding:1px 5px;border-radius:5px}
+.rec-vid{display:block;width:100%;height:auto;background:var(--surface)}
+.rec-vid.sq{display:none}
+.rec-pts{list-style:none;margin:40px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 24px}
+.rec-pts li{margin:0;font-size:16px;line-height:26px;color:var(--muted);max-width:34ch}
+.rec-pts kbd{font:600 .95em var(--sans);color:var(--ink)}
+.rec-pts code{font-size:.92em;color:var(--ink-2)}
+.new-pill{display:inline-flex;align-items:center;gap:8px;margin:0 0 20px;padding:7px 13px;border-radius:99px;background:var(--tint);box-shadow:inset 0 0 0 1px var(--tint-line);color:var(--tint-accent);text-decoration:none;font:600 13px/16px var(--sans);transition:background 160ms var(--ease-out-quart)}
+.new-pill .arrow{font-weight:400}
+@media (hover:hover) and (pointer:fine){.new-pill:hover{background:var(--tint-2)}}
+
 /* ── WORKFLOW ─────────────────────────────────────────────────────── */
 .flow{row-gap:40px}
 .support{margin:24px 0 0;color:var(--muted);font-size:var(--t-body);line-height:28px;max-width:52ch}
@@ -476,6 +497,8 @@ button.seal{display:block;padding:0;border:0;background:none;cursor:pointer;bord
   .hero-art .tchip{left:0;bottom:0}
   .sec{padding-top:88px;padding-bottom:104px}
   .sec-head > div,.sec-head > p{grid-column:1 / -1}
+  .rec-vid.wide{display:none}.rec-vid.sq{display:block}
+  .rec-pts{grid-template-columns:1fr}
   .desk{grid-template-columns:minmax(0,1fr);padding:20px 16px 72px;min-height:0}
   .term{margin:20px 0 0 0}
   .trust .thead{grid-column:1 / -1}
@@ -558,6 +581,7 @@ button.seal{display:block;padding:0;border:0;background:none;cursor:pointer;bord
 <!-- ═══════════════════════ HERO ═══════════════════════ -->
 <section class="wrap grid hero" aria-labelledby="hero-title">
   <div class="hero-copy">
+    <a class="new-pill" href="#record">New: screen recording <span class="arrow" aria-hidden="true">→</span></a>
     <p class="kicker"><span class="dot" aria-hidden="true"></span>Visual context for AI coding agents</p>
     <h1 id="hero-title"><span class="l">Capture anything.</span> <span class="l">Paste <span class="ev">everything.</span></span></h1>
     <p class="lead">Take screenshots the way you always do. They fall into a bucket. Press <kbd>⌘V</kbd> in your terminal and Claude&nbsp;Code attaches every one as an image.</p>
@@ -657,6 +681,29 @@ button.seal{display:block;padding:0;border:0;background:none;cursor:pointer;bord
         </div>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ RECORD (0.5) ═══════════════════════ -->
+<section class="sec magenta" id="record" aria-labelledby="record-title">
+  <div class="wrap">
+    <div class="grid sec-head rv">
+      <div>
+        <p class="kicker"><span class="dot" aria-hidden="true"></span>New in 0.5</p>
+        <h2 class="h2" id="record-title">Bucket now records.</h2>
+      </div>
+    </div>
+
+    <div class="demo rec-card rv">
+      <video class="rec-vid wide" autoplay muted loop playsinline preload="metadata" poster="assets/recording-16x9-poster.webp" width="1920" height="1080" aria-label="Screen recording of Bucket 0.5: Command Shift 6 records a region while a checkout page goes from Pay to Payment failed; Command V in Claude Code pastes the frames as Image 1 to Image 5 and a json file." data-rec data-src="assets/recording-16x9.mp4"></video>
+      <video class="rec-vid sq" autoplay muted loop playsinline preload="metadata" poster="assets/recording-1x1-poster.webp" width="1080" height="1080" aria-label="Screen recording of Bucket 0.5: Command Shift 6 records a region while a checkout page goes from Pay to Payment failed; Command V in Claude Code pastes the frames as Image 1 to Image 5 and a json file." data-rec data-src="assets/recording-1x1.mp4"></video>
+    </div>
+
+    <ul class="rec-pts rv">
+      <li><kbd>⌘⇧6</kbd> and drag a region. A click without a drag records the whole screen.</li>
+      <li>A small pill shows the time. ■ stops the recording, ✕ throws it away.</li>
+      <li><kbd>⌘V</kbd> in Claude&nbsp;Code pastes the frames where the screen changed, then a <code>.json</code> with the text of each one.</li>
+    </ul>
   </div>
 </section>
 
@@ -991,6 +1038,37 @@ the paste.
   function shut(){ modal.classList.remove('is-open'); back.classList.remove('is-open'); document.body.style.overflow=''; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
   btn.addEventListener('click', open); close.addEventListener('click', shut); back.addEventListener('click', shut);
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && modal.classList.contains('is-open')) shut(); });
+})();
+
+/* ════════════════════════════════════════════════════════════════════
+   RECORD — the two recordings play only when visible and never with reduced motion
+   (then the poster is all there is, and no video file is fetched). Only the video the layout shows gets its
+   source, so the other one never downloads.
+   ════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var RM = matchMedia('(prefers-reduced-motion: reduce)'), narrow = matchMedia('(max-width:860px)');
+  var vids = Array.prototype.slice.call(document.querySelectorAll('video[data-rec]'));
+  if (!vids.length) return;
+  var seen = new WeakMap();
+  function shown(v){ return v.offsetParent !== null; }
+  function sync(){
+    vids.forEach(function(v){
+      if (RM.matches || !shown(v)){ v.pause(); return; }
+      if (!v.getAttribute('src')){ v.src = v.dataset.src; v.load(); }
+      if (!seen.get(v)){ v.pause(); return; }
+      var p = v.play(); if (p && p.catch) p.catch(function(){});
+    });
+  }
+  function still(){ if (RM.matches) vids.forEach(function(v){ v.removeAttribute('autoplay'); v.pause(); }); }
+  still();
+  if ('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(es){ es.forEach(function(e){ seen.set(e.target, e.isIntersecting); }); sync(); }, {threshold:.25});
+    vids.forEach(function(v){ io.observe(v); });
+  } else vids.forEach(function(v){ seen.set(v, true); });
+  RM.addEventListener && RM.addEventListener('change', function(){ still(); sync(); });
+  narrow.addEventListener && narrow.addEventListener('change', sync);
+  sync();
 })();
 
 /* ════════════════════════════════════════════════════════════════════

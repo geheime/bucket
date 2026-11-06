@@ -124,6 +124,10 @@ tells you at launch and in the menu.
 
 ### Recording a region
 
+<p align="center">
+  <img src="docs/media/recording.gif" width="880" alt="Cmd+Shift+6: a region is dragged over a checkout page and a pill under it counts the time while the page goes from Pay to Processing to Payment failed; Stop, the pill says Reading and then 1 in bucket; Cmd+V in Claude Code pastes five frames as [Image #1] to [Image #5] plus the path of a .json file">
+</p>
+
 Cmd+Shift+6 records a region of the screen, so an agent can see what happened and not only how it ended up.
 
 1. Press Cmd+Shift+6 (or **Record a region** in the menu) and drag the region. A click without a drag records the whole
