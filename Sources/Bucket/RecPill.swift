@@ -184,6 +184,7 @@ final class RecPillPanel {
         let dark = RecPillPanel.dark
         let built = RecPillLayers(kind: kind, text: text, palette: PillPalette(dark: dark), opaque: true)
         let panel = BucketPanel(size: built.size, ignoresMouse: kind == .reading)
+        panel.level = RegionBorder.pillLevel // above the scrim and the frame, always
         panel.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         let view = RecPillView(frame: CGRect(origin: .zero, size: built.size))
         view.wantsLayer = true

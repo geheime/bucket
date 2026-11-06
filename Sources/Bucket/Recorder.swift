@@ -119,7 +119,7 @@ final class Recorder {
         stopping = false; cancelling = false; stoppedByLimit = false
         set(.recording)
 
-        border.show(region: rect)
+        border.show(region: rect, screen: screen)
         let visible = screen.visibleFrame
         pill.show(kind: .recording, text: RecordingClock.format(0)) { size in
             let placed = RecPillPlacement.place(region: rect, pill: size, visible: visible)

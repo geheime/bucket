@@ -5,8 +5,15 @@ All notable changes to Bucket are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- The bucket no longer empties by itself. Some apps read the clipboard for their own reasons (Safari does it when you
+  type an accent with Option+E), and Bucket took that as a paste. Now a read only counts as a paste if Cmd is held
+  down (Cmd+V) or you clicked a moment ago (Edit > Paste, the context menu) without Option. Any other read still gets
+  its data, and Bucket puts the clipboard back the way it was, so the real paste still empties the bucket.
+
 ### Added
-- **Screen recording.** Cmd+Shift+6 records a region of the screen. You drag the region on Bucket's own overlay, a
+- **Screen recording.** Cmd+Shift+6 records a region of the screen. You drag the region on Bucket's own overlay (a click
+  without a drag takes the whole screen, and Esc or a right click cancels), the screen outside it stays dimmed while it records, a
   small pill under it shows the time and has a stop button and a cross to discard, and Cmd+Shift+6 again stops it.
   The menu has **Record a region** / **Stop recording**.
 - A recording is **one item** in the bucket. Bucket picks the frames where the screen changes (at most 12, 640 px

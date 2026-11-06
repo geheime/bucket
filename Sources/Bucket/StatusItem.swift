@@ -378,6 +378,7 @@ final class StatusController: NSObject, NSMenuDelegate {
             self.companion.prepare()
             let shots = self.bucket.takeBatch()
             guard !shots.isEmpty else { self.companion.abandonPrepared(count: self.bucket.count); return }
+            pasteLog.notice("bucket taken as pasted (\(shots.count, privacy: .public) items)")
             self.exporter.record(shots, via: "paste")
             self.companion.pasted(shots.count)
             self.keycaps.show(.paste, captureSymbols: Shortcut.capture.symbols)

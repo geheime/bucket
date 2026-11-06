@@ -1,4 +1,7 @@
 import AppKit
+import os
+
+public let pasteLog = Logger(subsystem: "studio.bast.bucket", category: "paste")
 
 /// How a batch is written into the clipboard.
 /// `bare` is the default: Claude Code turns every space-separated image path into an attachment,
@@ -49,16 +52,57 @@ public enum ShellQuote {
     }
 }
 
-/// Fires `onPasted` at most once. Only a request for text or PNG data counts as a paste: desktop apps read the
-/// file URL right after activation, before any paste, to validate their Paste menu.
+/// Does a request for the clipboard data mean the user pasted? Apps also read the clipboard for their own reasons (Safari asks
+/// for `public.png` when you type a dead-key accent, measured 12:37:21), and that must not empty the bucket.
+/// A paste is Cmd held down right now (Cmd+V), or a mouse click a moment ago (Edit > Paste, the context menu) with Option NOT down
+/// (Option is the accent key). Anything else is served but not counted.
+public enum PasteIntent {
+    public static let clickWindow: TimeInterval = 1.5
+
+    public static func counts(commandDown: Bool, optionDown: Bool, secondsSinceClick: TimeInterval) -> Bool {
+        if commandDown { return true }
+        return !optionDown && secondsSinceClick >= 0 && secondsSinceClick < clickWindow
+    }
+
+    /// The live state: global modifier flags and the time since the last mouse-up (no permission needed for either).
+    public static func current() -> (command: Bool, option: Bool, sinceClick: TimeInterval) {
+        let flags = NSEvent.modifierFlags
+        let since = min(CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .leftMouseUp),
+                        CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .rightMouseUp))
+        return (flags.contains(.command), flags.contains(.option), since)
+    }
+}
+
+/// Fires `onPasted` at most once, and only for a request that `PasteIntent` says is a paste. Only text or PNG data counts:
+/// desktop apps read the file URL right after activation, before any paste, to validate their Paste menu.
+/// A request that does not count is still served; `onIgnored` fires once so the exporter can put a fresh promise back
+/// (data that was served is cached by the pasteboard, and the real Cmd+V would never ask again).
 private final class PasteGate {
     private let onPasted: () -> Void
+    private let intent: () -> (command: Bool, option: Bool, sinceClick: TimeInterval)
+    var onIgnored: (() -> Void)?
     private var fired = false
-    init(_ onPasted: @escaping () -> Void) { self.onPasted = onPasted }
+    private var ignoredReported = false
+    private let lock = NSLock()
+    init(_ onPasted: @escaping () -> Void, intent: @escaping () -> (command: Bool, option: Bool, sinceClick: TimeInterval) = PasteIntent.current) {
+        self.onPasted = onPasted
+        self.intent = intent
+    }
     func requested(_ type: NSPasteboard.PasteboardType) {
-        guard type != .fileURL, !fired else { return }
-        fired = true
-        DispatchQueue.main.async(execute: onPasted)
+        guard type != .fileURL else { return }
+        let i = intent()
+        let counts = PasteIntent.counts(commandDown: i.command, optionDown: i.option, secondsSinceClick: i.sinceClick)
+        pasteLog.notice("gate \(counts ? "counted" : "ignored", privacy: .public): cmd \(i.command, privacy: .public) opt \(i.option, privacy: .public) since click \(i.sinceClick, format: .fixed(precision: 2), privacy: .public) s")
+        lock.lock()
+        defer { lock.unlock() }
+        if counts {
+            guard !fired else { return }
+            fired = true
+            DispatchQueue.main.async(execute: onPasted)
+        } else if !fired, !ignoredReported {
+            ignoredReported = true
+            DispatchQueue.main.async { [onIgnored] in onIgnored?() }
+        }
     }
 }
 
@@ -76,6 +120,7 @@ private final class PastePromise: NSObject, NSPasteboardItemDataProvider {
 
     func pasteboard(_ pasteboard: NSPasteboard?, item: NSPasteboardItem, provideDataForType type: NSPasteboard.PasteboardType) {
         Exporter.fill(item, type: type, text: text, path: path)
+        pasteLog.notice("clipboard data requested: \(type.rawValue, privacy: .public), front app \(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?", privacy: .public)")
         gate.requested(type)
     }
 
@@ -93,6 +138,14 @@ public final class Exporter {
     /// that write. While the generation is unchanged the clipboard is still ours and the batch can follow the front app.
     private var lastShots: [Shot] = []
     private var lastChange = -1
+    /// What the current promise was made from, so an ignored request can put the same promise back.
+    private var stagedAll: [Shot] = [], stagedMode = PasteMode.terminal, stagedOnPasted: (() -> Void)?
+    private var currentGate: PasteGate?
+    /// What the gate reads to tell a paste from an app's own read. Injectable so checks can play both.
+    public var pasteIntent: () -> (command: Bool, option: Bool, sinceClick: TimeInterval) = PasteIntent.current
+    private var restageTimes: [Date] = []
+    /// At most this many fresh promises per second: if something keeps asking, the loop stops (the bucket stays loaded: fail safe).
+    public static let maxRestagesPerSecond = 5
 
     /// `pasteboard` is injectable so checks never touch the real clipboard.
     public init(library: Library, pasteboard: NSPasteboard = .general) {
@@ -190,11 +243,33 @@ public final class Exporter {
         guard !shots.isEmpty else { return }
         let pb = pasteboard
         pb.clearContents()
-        pb.writeObjects(items(for: shots, mode: mode, gate: PasteGate(onPasted)))
+        let gate = PasteGate(onPasted, intent: pasteIntent)
+        gate.onIgnored = { [weak self, weak gate] in self?.promiseServedEarly(gate) }
+        currentGate = gate
+        stagedAll = all; stagedMode = mode; stagedOnPasted = onPasted
+        pb.writeObjects(items(for: shots, mode: mode, gate: gate))
         staged = true
         stagedChange = pb.changeCount
         lastShots = shots
         lastChange = pb.changeCount
+    }
+
+    /// A request that was not a paste got the data: the clipboard now holds it, so put a fresh promise where it was.
+    /// Only if the clipboard is still ours (never over something the user copied) and the gate is still the current one.
+    private func promiseServedEarly(_ gate: PasteGate?) {
+        guard let gate, gate === currentGate, isStaged, let onPasted = stagedOnPasted else {
+            pasteLog.notice("promise not restaged (clipboard no longer ours)")
+            return
+        }
+        let now = Date()
+        restageTimes = restageTimes.filter { now.timeIntervalSince($0) < 1 }
+        guard restageTimes.count < Exporter.maxRestagesPerSecond else {
+            pasteLog.notice("promise not restaged (too many requests in a second)")
+            return
+        }
+        restageTimes.append(now)
+        pasteLog.notice("promise restaged after an ignored request")
+        stage(stagedAll, mode: stagedMode, onPasted: onPasted)
     }
 
     /// Lays the last batch out again for another front app while the clipboard is still our last write (nobody copied
@@ -207,7 +282,7 @@ public final class Exporter {
         guard !shots.isEmpty else { return false }
         let pb = pasteboard
         pb.clearContents()
-        pb.writeObjects(items(for: shots, mode: mode, gate: PasteGate({})))
+        pb.writeObjects(items(for: shots, mode: mode, gate: PasteGate({}, intent: pasteIntent)))
         lastChange = pb.changeCount
         return true
     }

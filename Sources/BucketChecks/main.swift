@@ -1743,7 +1743,8 @@ do {
 
     func fresh() -> (NSPasteboard, Exporter) {
         let pb = NSPasteboard(name: .init("bucket-check-\(UUID())"))
-        return (pb, Exporter(library: library, pasteboard: pb))
+        let ex = Exporter(library: library, pasteboard: pb); ex.pasteIntent = { (true, false, 99) } // a real Cmd+V
+        return (pb, ex)
     }
     let a = shot("pa"), b = shot("pb"), c = shot("pc")
     let batch = [a, b, c]
@@ -1854,7 +1855,8 @@ do {
     func spin() { RunLoop.main.run(until: Date().addingTimeInterval(0.15)) }
     func fresh() -> (NSPasteboard, Exporter) {
         let pb = NSPasteboard(name: .init("bucket-check-relayout-\(UUID())"))
-        return (pb, Exporter(library: library, pasteboard: pb))
+        let ex = Exporter(library: library, pasteboard: pb); ex.pasteIntent = { (true, false, 99) } // a real Cmd+V
+        return (pb, ex)
     }
     let batch = [shot("ra"), shot("rb")]
 
@@ -2287,6 +2289,56 @@ do {
         let after = (try? FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent(Library.dayPath(t0)).path))?.count
         check("circuit: an unreadable video fails and leaves nothing in the archive", failedRun == nil && before == after && FileManager.default.fileExists(atPath: junk.path))
     }
+    try? FileManager.default.removeItem(at: root)
+}
+
+
+// Round 2 · what counts as a paste (Safari asks for public.png when you type an accent; that must not empty the bucket)
+do {
+    typealias I = PasteIntent
+    check("intent: Cmd down counts (Cmd+V)", I.counts(commandDown: true, optionDown: false, secondsSinceClick: 99))
+    check("intent: Cmd down counts even with Option", I.counts(commandDown: true, optionDown: true, secondsSinceClick: 99))
+    check("intent: a dead-key accent (Option, no Cmd, no click) does not count", !I.counts(commandDown: false, optionDown: true, secondsSinceClick: 99))
+    check("intent: no modifiers and no recent click does not count", !I.counts(commandDown: false, optionDown: false, secondsSinceClick: 99))
+    check("intent: a click a moment ago counts (Edit > Paste, context menu)", I.counts(commandDown: false, optionDown: false, secondsSinceClick: 0.4))
+    check("intent: the click window is 1.5 s", I.counts(commandDown: false, optionDown: false, secondsSinceClick: 1.49) && !I.counts(commandDown: false, optionDown: false, secondsSinceClick: 1.5))
+    check("intent: a recent click with Option down does not count", !I.counts(commandDown: false, optionDown: true, secondsSinceClick: 0.2))
+    check("intent: a negative or broken time does not count", !I.counts(commandDown: false, optionDown: false, secondsSinceClick: -1))
+
+    // An ignored request is served, and a fresh promise goes back so the real paste still asks.
+    let root = tempDir(), lib = Library(root: root)
+    let png = root.appendingPathComponent("a.png"); makePNG(at: png)
+    let pb = NSPasteboard(name: NSPasteboard.Name("bucket-checks-\(UUID().uuidString)"))
+    let ex = Exporter(library: lib, pasteboard: pb)
+    ex.pasteIntent = { (false, true, 99) } // Option held, no Cmd, no click: a dead-key accent
+    var pasted = 0
+    ex.stage([fakeShot("a", path: png.path)], mode: .browser) { pasted += 1 }
+    let held = false
+    let changeBefore = pb.changeCount
+    let served = pb.data(forType: .png) // not a paste: no Cmd, no recent click in a headless run
+    RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+    if !held {
+        check("gate: an ignored request is served", served != nil)
+        check("gate: it does not count as a paste", pasted == 0)
+        check("gate: a fresh promise went back (the clipboard changed again)", pb.changeCount > changeBefore)
+        check("gate: the promise is still ours", ex.isStaged)
+        // loop guard: a storm of requests restages at most maxRestagesPerSecond times
+        var restages = 0, last = pb.changeCount
+        for _ in 0 ..< 30 {
+            _ = pb.data(forType: .png)
+            RunLoop.main.run(until: Date().addingTimeInterval(0.01))
+            if pb.changeCount != last { restages += 1; last = pb.changeCount }
+        }
+        check("gate: requests in a loop stop restaging after the cap", restages <= Exporter.maxRestagesPerSecond + 1 && restages > 0)
+        check("gate: the bucket was never taken by all that", pasted == 0)
+    }
+    // something the user copied is never replaced by a restage
+    ex.stage([fakeShot("a", path: png.path)], mode: .browser) { pasted += 1 }
+    _ = pb.data(forType: .png)
+    pb.clearContents(); pb.setString("mine", forType: .string)
+    RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+    check("gate: what the user copied meanwhile stays", pb.string(forType: .string) == "mine")
+    pb.releaseGlobally()
     try? FileManager.default.removeItem(at: root)
 }
 
