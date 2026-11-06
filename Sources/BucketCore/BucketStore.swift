@@ -50,7 +50,7 @@ public final class BucketStore {
     private func loadable(_ paths: [String]) -> (shots: [Shot], kept: [String]) {
         var shots: [Shot] = [], kept: [String] = []
         for path in paths {
-            if let shot = library.load(sidecar: path) { shots.append(shot); kept.append(path) }
+            if let shot = library.loadItem(sidecar: path) { shots.append(shot); kept.append(path) }
             else { NSLog("Bucket: dropped \(path) from the bucket state (sidecar missing or unreadable; no file was touched)") }
         }
         return (shots, kept)

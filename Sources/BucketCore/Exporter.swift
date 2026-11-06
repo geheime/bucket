@@ -100,30 +100,39 @@ public final class Exporter {
         self.pasteboard = pasteboard
     }
 
+    /// What a bucket item becomes when pasted: a photo is its png; a recording is its frames in order and then its json
+    /// (the agent attaches the frames as images and reads the json on its own). Where only images go (browser, app) the json stays out.
+    public static func deliveryPaths(_ shot: Shot, includeJSON: Bool = true) -> [String] {
+        guard let r = shot.recording else { return [shot.path] }
+        return includeJSON ? r.frames + [r.sidecar] : r.frames
+    }
+
     /// Only shots whose png is still on disk: a path that does not exist is never handed to the clipboard (logged, nothing deleted).
+    /// A recording needs every frame and its json.
     public static func deliverable(_ shots: [Shot]) -> [Shot] {
         shots.filter { shot in
-            if ShellQuote.hasControl(shot.path) {
+            let paths = deliveryPaths(shot)
+            if paths.contains(where: ShellQuote.hasControl) {
                 NSLog("Bucket: skipped \(shot.id) from the clipboard (its path has control characters)")
                 return false
             }
-            let there = FileManager.default.fileExists(atPath: shot.path)
-            if !there { NSLog("Bucket: skipped \(shot.id) from the clipboard (png missing at \(shot.path))") }
+            let there = paths.allSatisfy { FileManager.default.fileExists(atPath: $0) }
+            if !there { NSLog("Bucket: skipped \(shot.id) from the clipboard (a file is missing near \(shot.path))") }
             return there
         }
     }
 
     public static func render(_ shots: [Shot], format: PasteFormat) -> String {
         // A path that cannot be written safely (control characters) never reaches the clipboard, in any format.
-        let shots = shots.filter { shot in
-            let ok = ShellQuote.path(shot.path) != nil
-            if !ok { NSLog("Bucket: skipped \(shot.id) from the clipboard (its path has control characters)") }
+        let paths = shots.flatMap { deliveryPaths($0) }.filter { p in
+            let ok = ShellQuote.path(p) != nil
+            if !ok { NSLog("Bucket: skipped a path from the clipboard (it has control characters)") }
             return ok
         }
-        let quoted = shots.compactMap { ShellQuote.path($0.path) }
+        let quoted = paths.compactMap { ShellQuote.path($0) }
         switch format {
         case .numbered:
-            let noun = shots.count == 1 ? "this screenshot" : "these screenshots in order"
+            let noun = quoted.count == 1 ? "this screenshot" : "these screenshots in order"
             let list = quoted.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
             return "Read \(noun):\n\(list)\n"
         case .bare: return quoted.joined(separator: " ") + " "
@@ -160,7 +169,7 @@ public final class Exporter {
         let types = Exporter.types(for: mode)
         let units: [(text: String?, path: String)] = mode == .terminal
             ? [(Exporter.render(shots, format: .current), shots[0].path)]
-            : shots.map { (nil, $0.path) }
+            : shots.flatMap { Exporter.deliveryPaths($0, includeJSON: false) }.map { (nil, $0) }
         return units.map { unit in
             let item = NSPasteboardItem()
             if let gate {
@@ -249,7 +258,7 @@ public final class Exporter {
         appendLine(record, to: library.root.appendingPathComponent("batches.jsonl"))
 
         // Read-modify-write on the disk copy: the Shot we hold may be stale (OCR can have written since).
-        for shot in shots {
+        for shot in shots where shot.recording == nil { // a recording's json is the agent's, not a Shot: it holds no batch list
             do { try library.update(sidecar: shot.sidecarPath) { $0.batches.append(String(batchID)) } }
             catch { NSLog("Bucket: could not record batch \(batchID) on \(shot.id): \(error.localizedDescription)") }
         }

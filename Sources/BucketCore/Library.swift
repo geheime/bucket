@@ -24,15 +24,18 @@ public struct Shot: Codable, Equatable {
     public let resizeMs: Int
     public var ocr: OCR
     public var batches: [String]
+    /// Set only for a bucket item that is a screen recording (see `Library.loadItem`); never written to a photo's sidecar.
+    public var recording: RecordingRef?
 
     public init(id: String, createdAt: String, path: String, originalPath: String, width: Int, height: Int,
-                bytes: Int, originalBytes: Int, frontApp: String?, frontBundleId: String? = nil, resizeMs: Int, ocr: OCR, batches: [String]) {
+                bytes: Int, originalBytes: Int, frontApp: String?, frontBundleId: String? = nil, resizeMs: Int, ocr: OCR, batches: [String], recording: RecordingRef? = nil) {
         self.id = id; self.createdAt = createdAt; self.path = path; self.originalPath = originalPath
         self.width = width; self.height = height; self.bytes = bytes; self.originalBytes = originalBytes
         self.frontApp = frontApp; self.frontBundleId = frontBundleId; self.resizeMs = resizeMs; self.ocr = ocr; self.batches = batches
+        self.recording = recording
     }
 
-    public var sidecarPath: String { (path as NSString).deletingPathExtension + ".json" }
+    public var sidecarPath: String { recording?.sidecar ?? (path as NSString).deletingPathExtension + ".json" }
 }
 
 /// Library: owns the archive on disk. Decides nothing about what gets delivered.

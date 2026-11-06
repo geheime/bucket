@@ -2,6 +2,7 @@ import AppKit
 import BucketCore
 import CryptoKit
 import Carbon
+import AVFoundation
 
 // Minimal assert runner: XCTest / swift-testing are not available with Command Line Tools only.
 var passed = 0
@@ -2035,6 +2036,258 @@ do {
     check("capture outcome: a good image wins over anything else", O.classify(status: 0, stderr: "", hasImage: true) == .captured
           && O.classify(status: 1, stderr: "could not create image from rect", hasImage: true) == .captured)
     check("capture outcome: exit 0 with an unreadable file is still a cancel", O.classify(status: 0, stderr: "noise", hasImage: false) == .cancelled)
+}
+
+
+// 0.5 · screen recording: pure pieces
+do {
+    // frame selection
+    let flat: (Int, Int) -> Double = { _, _ in 0 }
+    check("frames: a static screen keeps only the first and the last", FramePicker.pick(count: 10, distance: flat, threshold: 0.01, cap: 12) == [0, 9])
+    check("frames: one sample is one frame", FramePicker.pick(count: 1, distance: flat, threshold: 0.01, cap: 12) == [0])
+    check("frames: no samples, no frames", FramePicker.pick(count: 0, distance: flat, threshold: 0.01, cap: 12).isEmpty)
+    // the screen changes at samples 3 and 7 (a step in a value list)
+    let level: [Double] = [0, 0, 0, 1, 1, 1, 1, 2, 2, 2]
+    let step: (Int, Int) -> Double = { abs(level[$1] - level[$0]) / 2 }
+    check("frames: it picks where the screen changes, first and last included", FramePicker.pick(count: 10, distance: step, threshold: 0.1, cap: 12) == [0, 3, 7, 9])
+    check("frames: below the threshold nothing is picked but first and last", FramePicker.pick(count: 10, distance: step, threshold: 2, cap: 12) == [0, 9])
+    // every sample is new: the cap keeps first, last and the biggest changes, in time order
+    let big: [Double] = [0, 1, 1, 5, 1, 9, 1, 2, 1, 7, 1, 1, 3, 1, 1]  // change score of each sample
+    let rising: (Int, Int) -> Double = { _, j in big[j] / 10 }
+    let capped = FramePicker.pick(count: 15, distance: rising, threshold: 0.05, cap: 5)
+    check("frames: the cap is respected", capped.count == 5)
+    check("frames: the cap keeps first and last", capped.first == 0 && capped.last == 14)
+    check("frames: the cap keeps the biggest changes", capped == [0, 3, 5, 9, 14])
+    check("frames: the cap keeps time order", capped == capped.sorted())
+    check("frames: the real cap is 12", RecordingConfig.maxFrames == 12 && FramePicker.pick(count: 100, distance: { _, _ in 1 }, threshold: 0.01, cap: RecordingConfig.maxFrames).count == 12)
+    check("frames: the threshold is a named constant", RecordingConfig.changeThreshold > 0 && RecordingConfig.changeThreshold < 0.1)
+    check("frames: identical thumbnails differ by 0, black and white by 1",
+          RecordingProcessor.meanDifference([0, 0], [0, 0]) == 0 && RecordingProcessor.meanDifference([0, 0], [255, 255]) == 1)
+
+    // names
+    check("names: frame stem carries the time, zero padded", RecordingNames.frameStem(id: "2026-11-06_12-00-00_ab12", t: 3.2) == "2026-11-06_12-00-00_ab12_t003.2s")
+    check("names: frame file is a png", RecordingNames.frameFile(id: "2026-11-06_12-00-00_ab12", t: 14.04) == "2026-11-06_12-00-00_ab12_t014.0s.png")
+    check("names: a listing sorts in time order", RecordingNames.frameFile(id: "x", t: 9.5) < RecordingNames.frameFile(id: "x", t: 10.5))
+    let day = URL(fileURLWithPath: "/a/2026-11-06")
+    check("names: video, json and frames folder share the id",
+          RecordingNames.video(day: day, id: "i").path == "/a/2026-11-06/i.mov" && RecordingNames.sidecar(day: day, id: "i").path == "/a/2026-11-06/i.json"
+          && RecordingNames.framesDir(day: day, id: "i").path == "/a/2026-11-06/i")
+
+    // text
+    check("text: lines are trimmed and empty ones dropped", RecordingText.lines(" a \n\n b\n") == ["a", "b"])
+    check("text: appeared is what the frame before did not have", RecordingText.appeared(previous: ["a", "b"], current: ["b", "c", "c"]) == ["c"])
+    check("text: first frame, everything appeared", RecordingText.appeared(previous: [], current: ["a"]) == ["a"])
+
+    // json
+    let rs = RecordingSidecar(video: "/v.mov", durationS: 14.04, region: .init(x: 1, y: 2, w: 3, h: 4),
+                              frames: [.init(t: 3.24, path: "/f.png", text: ["hi"], appeared: ["hi"])], ocr: true)
+    let obj = (try? JSONSerialization.jsonObject(with: rs.encoded())) as? [String: Any] ?? [:]
+    check("json: kind is bucket.recording", obj["kind"] as? String == "bucket.recording")
+    check("json: the note says what it is, in English", (obj["note"] as? String)?.hasPrefix("Screen recording captured with Bucket. Frames are the moments where the screen changed, in order;") == true
+          && (obj["note"] as? String)?.contains("No audio. The user's message says what to do with it.") == true)
+    check("json: fields are video, duration_s, region, frames", obj["video"] as? String == "/v.mov" && obj["duration_s"] as? Double == 14.0
+          && (obj["region"] as? [String: Int]) == ["x": 1, "y": 2, "w": 3, "h": 4] && (obj["frames"] as? [[String: Any]])?.count == 1)
+    let f0 = (obj["frames"] as? [[String: Any]])?.first ?? [:]
+    check("json: a frame has t, path, text, appeared", f0["t"] as? Double == 3.2 && f0["path"] as? String == "/f.png"
+          && f0["text"] as? [String] == ["hi"] && f0["appeared"] as? [String] == ["hi"])
+    let off = RecordingSidecar(video: "/v.mov", durationS: 1, region: .init(x: 0, y: 0, w: 1, h: 1), frames: [], ocr: false)
+    check("json: with OCR off the note says text is empty", off.note.contains("'text' is empty") && !rs.note.contains("'text' is empty"))
+    check("json: it round-trips", (try? JSONDecoder().decode(RecordingSidecar.self, from: rs.encoded())) == rs)
+
+    // pill placement (AppKit coordinates, y up)
+    let screen = CGRect(x: 0, y: 0, width: 1440, height: 875)   // visible frame
+    let pill = CGSize(width: 220, height: 38)
+    let mid = CGRect(x: 400, y: 300, width: 500, height: 300)
+    let below = RecPillPlacement.place(region: mid, pill: pill, visible: screen)
+    check("pill: below the region when there is room", below.place == .below)
+    check("pill: aligned to the region's right edge", below.frame.maxX == mid.maxX)
+    check("pill: 8 pt of air under the region", mid.minY - below.frame.maxY == 8)
+    let low = CGRect(x: 400, y: 20, width: 500, height: 300)
+    let above = RecPillPlacement.place(region: low, pill: pill, visible: screen)
+    check("pill: above the region when it does not fit below", above.place == .above && above.frame.minY - low.maxY == 8)
+    let full = RecPillPlacement.place(region: screen, pill: pill, visible: screen)
+    check("pill: a region as big as the screen puts it inside, bottom center", full.place == .inside && full.frame.midX == screen.midX && full.frame.minY == 24)
+    let tall = RecPillPlacement.place(region: CGRect(x: 0, y: 10, width: 1440, height: 850), pill: pill, visible: screen)
+    check("pill: neither below nor above -> inside", tall.place == .inside)
+    let narrow = RecPillPlacement.place(region: CGRect(x: 10, y: 300, width: 100, height: 100), pill: pill, visible: screen)
+    check("pill: a narrow region never pushes the pill off the left edge", narrow.frame.minX >= screen.minX && narrow.place == .below)
+    check("pill: every placement stays inside the visible frame",
+          [below, above, full, tall, narrow].allSatisfy { screen.contains($0.frame) })
+
+    // region -> screencapture
+    check("region: a click is not a region", RecordingRegion.isClick(CGRect(x: 0, y: 0, width: 3, height: 200)) && RecordingRegion.isClick(.zero))
+    check("region: a drag is", !RecordingRegion.isClick(CGRect(x: 0, y: 0, width: 200, height: 100)))
+    check("region: a drag in any direction is the same rect", RecordingRegion.rect(from: CGPoint(x: 50, y: 60), to: CGPoint(x: 10, y: 20)) == CGRect(x: 10, y: 20, width: 40, height: 40))
+    let sc = RecordingRegion.screencaptureRect(CGRect(x: 3, y: 100, width: 773, height: 870), mainHeight: 1117)
+    check("region: screencapture takes top-left origin", sc == .init(x: 3, y: 147, w: 773, h: 870))
+    check("region: argument is x,y,w,h", RecordingRegion.argument(sc) == "3,147,773,870")
+    let frac = RecordingRegion.screencaptureRect(CGRect(x: 10.5, y: 20.5, width: 100, height: 50), mainHeight: 900)
+    check("region: fractional points round outward, so the selection is inside the rect", frac == .init(x: 10, y: 829, w: 101, h: 51))
+
+    // limit and clock
+    let d = UserDefaults(suiteName: "bucket-checks-\(UUID().uuidString)")!
+    check("limit: default is 2 min", RecordingLimit.current(in: d) == .twoMinutes && RecordingLimit.current(in: d).seconds == 120)
+    RecordingLimit.set(.none, in: d)
+    check("limit: No limit persists and has no seconds", RecordingLimit.current(in: d) == .none && RecordingLimit.current(in: d).seconds == nil)
+    RecordingLimit.set(.tenMinutes, in: d)
+    check("limit: 10 min persists", RecordingLimit.current(in: d).seconds == 600)
+    check("limit: the five options in order", RecordingLimit.allCases.map(\.title) == ["1 min", "2 min", "5 min", "10 min", "No limit"])
+    d.set(7, forKey: RecordingLimit.key)
+    check("limit: a junk value falls back to the default", RecordingLimit.current(in: d) == .twoMinutes)
+    check("clock: m:ss", RecordingClock.format(0) == "0:00" && RecordingClock.format(14.9) == "0:14" && RecordingClock.format(125) == "2:05" && RecordingClock.format(600) == "10:00")
+    check("clock: before the countdown it shows elapsed", RecordingClock.display(elapsed: 100, limit: 120) == ("1:40", false))
+    check("clock: the last 10 s count down", RecordingClock.display(elapsed: 111, limit: 120) == ("-0:09", true))
+    check("clock: the countdown ends at -0:00", RecordingClock.display(elapsed: 120, limit: 120) == ("-0:00", true))
+    check("clock: no limit never counts down", RecordingClock.display(elapsed: 3000, limit: nil) == ("50:00", false))
+    check("clock: reached the limit", RecordingClock.reachedLimit(elapsed: 120, limit: 120) && !RecordingClock.reachedLimit(elapsed: 119.9, limit: 120) && !RecordingClock.reachedLimit(elapsed: 9999, limit: nil))
+    check("clock: copy", RecordingClock.stoppedAt(120) == "Stopped at 2:00" && RecordingClock.reading(14) == "Reading 0:14…")
+}
+
+// 0.5 · screen recording: the bucket item and the paste
+do {
+    let root = tempDir()
+    let lib = Library(root: root)
+    let id = "2026-11-06_12-00-00_ab12", dayName = "2026-11-06"
+    let dayDir = root.appendingPathComponent(dayName), framesDir = dayDir.appendingPathComponent(id)
+    try? FileManager.default.createDirectory(at: framesDir, withIntermediateDirectories: true)
+    var framePaths: [String] = []
+    for t in [0.0, 3.2, 9.0] {
+        let p = framesDir.appendingPathComponent(RecordingNames.frameFile(id: id, t: t))
+        makePNG(at: p, text: "t\(t)"); framePaths.append(p.path)
+    }
+    let sidecar = dayDir.appendingPathComponent("\(id).json")
+    let rec = RecordingSidecar(video: dayDir.appendingPathComponent("\(id).mov").path, durationS: 14,
+                               region: .init(x: 0, y: 0, w: 100, h: 50), frames: framePaths.map { .init(t: 0, path: $0, text: [], appeared: []) }, ocr: true)
+    try? rec.encoded().write(to: sidecar)
+    let item = lib.loadItem(sidecar: sidecar.path)
+    check("recording item: loads from its sidecar", item?.recording?.frames == framePaths)
+    check("recording item: path is the first frame, original is the video", item?.path == framePaths[0] && item?.originalPath.hasSuffix("\(id).mov") == true)
+    check("recording item: sidecarPath is the json", item?.sidecarPath == sidecar.path)
+    check("recording item: duration label for the thumbnail", item?.recording?.durationLabel == "0:14")
+    check("recording item: a photo's loader does not take it (search and OCR leave it alone)", lib.load(sidecar: sidecar.path) == nil)
+    check("recording item: search skips it", Search.run(library: lib, query: "t3").results.isEmpty)
+
+    if let item {
+        // bare paste: N frames and the json, in order
+        let out = Exporter.render([item], format: .bare)
+        check("paste: a recording expands to its frames and then the json", out == (framePaths + [sidecar.path]).joined(separator: " ") + " ")
+        let photo = root.appendingPathComponent("photo.png"); makePNG(at: photo)
+        let both = Exporter.render([fakeShot("p", path: photo.path), item, fakeShot("q", path: "/tmp/q.png")], format: .bare)
+        check("paste: photos and recordings keep the bucket's order", both == ([photo.path] + framePaths + [sidecar.path, "/tmp/q.png"]).joined(separator: " ") + " ")
+        check("paste: lines format expands too", Exporter.render([item], format: .lines).split(separator: "\n").count == 4)
+        check("paste: where only images go, the json stays out", Exporter.deliveryPaths(item, includeJSON: false) == framePaths)
+        check("paste: a recording is deliverable only with every frame", Exporter.deliverable([item]).count == 1)
+        try? FileManager.default.removeItem(atPath: framePaths[1])
+        check("paste: a missing frame keeps it off the clipboard", Exporter.deliverable([item]).isEmpty)
+        makePNG(at: URL(fileURLWithPath: framePaths[1]))
+
+        // the bucket counts it as one
+        let bucket = BucketStore(library: lib)
+        bucket.add(item)
+        check("bucket: a recording is ONE item", bucket.count == 1 && bucket.items.first?.id == id)
+        let batch = bucket.takeBatch()
+        check("bucket: it travels as a batch of one and empties the bucket", batch.count == 1 && bucket.count == 0 && bucket.lastBatch.count == 1)
+        let pb = NSPasteboard(name: NSPasteboard.Name("bucket-checks-\(UUID().uuidString)"))
+        let ex = Exporter(library: lib, pasteboard: pb)
+        ex.copy([item], mode: .terminal)
+        check("clipboard: terminal gets one text with every path", pb.pasteboardItems?.count == 1
+              && pb.string(forType: .string) == Exporter.render([item], format: .current))
+        ex.copy([item], mode: .app)
+        check("clipboard: app mode gets one item per frame, no json", pb.pasteboardItems?.count == 3)
+        check("record: pasting a recording does not choke on its json", (try? Data(contentsOf: sidecar)).flatMap { try? JSONDecoder().decode(RecordingSidecar.self, from: $0) } == rec)
+        pb.releaseGlobally()
+    }
+    // a hand-edited json cannot point the item elsewhere
+    var evil = rec; evil.frames[0].path = "/etc/passwd"
+    let evilID = "2026-11-06_12-00-01_cd34"
+    try? evil.encoded().write(to: dayDir.appendingPathComponent("\(evilID).json"))
+    check("recording item: a frame path that is not ours is refused", lib.loadItem(sidecar: dayDir.appendingPathComponent("\(evilID).json").path) == nil)
+    var other = rec; other.kind = "something"
+    try? other.encoded().write(to: dayDir.appendingPathComponent("2026-11-06_12-00-02_ef56.json"))
+    check("recording item: another kind is refused", lib.loadItem(sidecar: dayDir.appendingPathComponent("2026-11-06_12-00-02_ef56.json").path) == nil)
+    try? FileManager.default.removeItem(at: root)
+}
+
+// 0.5 · screen recording: the whole circuit on a synthetic video (no Screen Recording permission needed)
+do {
+    func makeVideo(at url: URL, seconds: Int, size: CGSize, color: (Int) -> CGFloat) -> Bool {
+        guard let writer = try? AVAssetWriter(outputURL: url, fileType: .mov) else { return false }
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: [AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: Int(size.width), AVVideoHeightKey: Int(size.height)])
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32ARGB])
+        writer.add(input)
+        guard writer.startWriting() else { return false }
+        writer.startSession(atSourceTime: .zero)
+        let fps = 10
+        for i in 0 ..< seconds * fps {
+            while !input.isReadyForMoreMediaData { Thread.sleep(forTimeInterval: 0.005) }
+            var pb: CVPixelBuffer?
+            CVPixelBufferCreate(nil, Int(size.width), Int(size.height), kCVPixelFormatType_32ARGB, nil, &pb)
+            guard let buf = pb else { return false }
+            CVPixelBufferLockBaseAddress(buf, [])
+            if let ctx = CGContext(data: CVPixelBufferGetBaseAddress(buf), width: Int(size.width), height: Int(size.height), bitsPerComponent: 8,
+                                   bytesPerRow: CVPixelBufferGetBytesPerRow(buf), space: CGColorSpaceCreateDeviceRGB(),
+                                   bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue) {
+                let g = color(i / fps)
+                ctx.setFillColor(CGColor(gray: g, alpha: 1)); ctx.fill(CGRect(origin: .zero, size: size))
+            }
+            CVPixelBufferUnlockBaseAddress(buf, [])
+            adaptor.append(buf, withPresentationTime: CMTime(value: CMTimeValue(i), timescale: CMTimeScale(fps)))
+        }
+        input.markAsFinished()
+        let sem = DispatchSemaphore(value: 0)
+        writer.finishWriting { sem.signal() }
+        sem.wait()
+        return writer.status == .completed
+    }
+
+    let root = tempDir(), lib = Library(root: root)
+    let mov = tempDir().appendingPathComponent("rec.mov")
+    // 4 s: black, black, white, white  ->  one change, at 2 s
+    let made = makeVideo(at: mov, seconds: 4, size: CGSize(width: 1280, height: 720)) { $0 < 2 ? 0.05 : 0.95 }
+    check("circuit: the synthetic video was written", made)
+    if made {
+        let t0 = Date()
+        let shot = try? RecordingProcessor.process(captured: mov, region: .init(x: 10, y: 20, w: 1280, h: 720), startedAt: t0, ocr: false, library: lib)
+        check("circuit: it produces a bucket item", shot?.recording != nil)
+        if let shot, let r = shot.recording {
+            check("circuit: first frame, one change, last frame", r.frames.count >= 3 && r.frames.count <= 4)
+            check("circuit: duration is about 4 s", abs(r.duration - 4) < 0.3)
+            check("circuit: the video moved into the archive by date", r.video == root.appendingPathComponent(Library.dayPath(t0)).appendingPathComponent("\(shot.id).mov").path
+                  && FileManager.default.fileExists(atPath: r.video))
+            check("circuit: the tmp video is gone", !FileManager.default.fileExists(atPath: mov.path))
+            check("circuit: frames sit in a sibling folder with the same stem", r.frames.allSatisfy { ($0 as NSString).deletingLastPathComponent.hasSuffix("/\(shot.id)") && $0.contains("\(shot.id)_t") && $0.hasSuffix("s.png") })
+            let size = { (p: String) -> CGSize in
+                guard let s = CGImageSourceCreateWithURL(URL(fileURLWithPath: p) as CFURL, nil), let pr = CGImageSourceCopyPropertiesAtIndex(s, 0, nil) as? [CFString: Any] else { return .zero }
+                return CGSize(width: pr[kCGImagePropertyPixelWidth] as? Int ?? 0, height: pr[kCGImagePropertyPixelHeight] as? Int ?? 0)
+            }
+            check("circuit: delivered frames are 640 px wide", r.frames.allSatisfy { size($0).width == 640 })
+            let originals = r.frames.map { $0.replacingOccurrences(of: "/\(Library.dayPath(t0))/", with: "/originals/\(Library.dayPath(t0))/") }
+            check("circuit: originals are kept at full size, apart", originals.allSatisfy { FileManager.default.fileExists(atPath: $0) && size($0).width == 1280 })
+            let data = FileManager.default.contents(atPath: r.sidecar)
+            let json = data.flatMap { try? JSONDecoder().decode(RecordingSidecar.self, from: $0) }
+            check("circuit: the json is a bucket.recording with the region", json?.kind == "bucket.recording" && json?.region == .init(x: 10, y: 20, w: 1280, h: 720))
+            check("circuit: frames are in time order", json.map { $0.frames.map(\.t) == $0.frames.map(\.t).sorted() } == true)
+            check("circuit: OCR off, text is empty and the note says so", json?.frames.allSatisfy { $0.text.isEmpty } == true && json?.note.contains("'text' is empty") == true)
+            check("circuit: the item pastes as frames + json", Exporter.render([shot], format: .bare).split(separator: " ").count == r.frames.count + 1)
+            check("circuit: files are owner only", ((try? FileManager.default.attributesOfItem(atPath: r.video))?[.posixPermissions] as? Int) == 0o600)
+        }
+        // a static screen: first and last only
+        let still = tempDir().appendingPathComponent("still.mov")
+        if makeVideo(at: still, seconds: 2, size: CGSize(width: 320, height: 200), color: { _ in 0.5 }) {
+            let s2 = try? RecordingProcessor.process(captured: still, region: .init(x: 0, y: 0, w: 320, h: 200), startedAt: Date().addingTimeInterval(1), ocr: false, library: lib)
+            check("circuit: a static screen gives first and last", s2?.recording?.frames.count == 2)
+            check("circuit: a narrow frame is not enlarged", s2?.recording?.frames.first.flatMap { CGImageSourceCreateWithURL(URL(fileURLWithPath: $0) as CFURL, nil) }
+                .flatMap { CGImageSourceCopyPropertiesAtIndex($0, 0, nil) as? [CFString: Any] }?[kCGImagePropertyPixelWidth] as? Int == 320)
+        }
+        // garbage in: nothing is left behind
+        let junk = tempDir().appendingPathComponent("junk.mov")
+        try? Data("not a video".utf8).write(to: junk)
+        let before = (try? FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent(Library.dayPath(t0)).path))?.count
+        let failedRun = try? RecordingProcessor.process(captured: junk, region: .init(x: 0, y: 0, w: 1, h: 1), startedAt: Date().addingTimeInterval(2), ocr: false, library: lib)
+        let after = (try? FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent(Library.dayPath(t0)).path))?.count
+        check("circuit: an unreadable video fails and leaves nothing in the archive", failedRun == nil && before == after && FileManager.default.fileExists(atPath: junk.path))
+    }
+    try? FileManager.default.removeItem(at: root)
 }
 
 print("PASS \(passed) · FAIL \(failed) · SKIP \(skipped)")
