@@ -122,7 +122,7 @@ final class PanelController: NSObject {
     private func currentData() -> PanelData {
         let items = bucket.items
         return PanelData(
-            items: items.map { PanelData.Item(id: $0.id, path: $0.path) },
+            items: items.map { PanelData.Item(id: $0.id, path: $0.path, duration: $0.recording?.durationLabel) },
             lastBatch: bucket.lastBatch.map(\.path),
             savedIn: PanelCopy.savedIn(root: library.root, day: Library.dayPath(Date())),
             ocrPending: OCRQueue.shared.pendingCount,

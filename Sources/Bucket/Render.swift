@@ -6,7 +6,7 @@ import BucketCore
 enum Render {
     static let scale = 2
 
-    static let states: [String: () -> NSView] = PanelRender.states // panel-*
+    static let states: [String: () -> NSView] = PanelRender.states.merging(RecRender.views) { a, _ in a } // panel-*, rec-region
 
     /// States drawn straight to PNG by Core (they need no view tree): the menu bar glyph canvas.
     static let canvases: [String: (Bool) -> Data?] = [
@@ -17,6 +17,7 @@ enum Render {
         "menubar-full": { MenubarCanvas.png(.full, dark: $0) },
         "menubar-error": { MenubarCanvas.png(.slash, dark: $0) }, // no Screen Recording permission
     ].merging(PillRender.states) { a, _ in a } // pill-* and keycaps-* (companion layer tree)
+        .merging(RecRender.states) { a, _ in a } // rec-pill, rec-pill-countdown, rec-reading
 
     static func run(state: String, out: URL, dark: Bool) -> Int32 {
         _ = NSApplication.shared // AppKit needs an app object to draw, even without windows

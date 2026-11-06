@@ -8,7 +8,7 @@ import ImageIO
 
 /// What the panel shows. Built by the controller from the bucket and the library, or faked by the renders.
 struct PanelData {
-    struct Item { let id: String; let path: String }
+    struct Item { let id: String; let path: String; var duration: String? = nil } // duration: a recording ("0:14")
     var items: [Item] = []            // the bucket, in order
     var lastBatch: [String] = []      // image paths of the last batch
     var savedIn = ""                  // "~/Bucket/2026-10-24"
@@ -164,6 +164,8 @@ final class ScrimButton: NSView {
 final class ThumbView: NSView {
     let id: String
     let path: String
+    /// A recording's thumbnail is its first frame with the duration in the corner.
+    var duration: String? { didSet { needsDisplay = true } }
     var image: NSImage? { didSet { needsDisplay = true } }
     /// What is drawn. `target` is where the numbering is going (it changes 420 ms after a removal).
     private(set) var number: Int
@@ -243,6 +245,15 @@ final class ThumbView: NSView {
         PanelColor.chip.setFill()
         NSBezierPath(roundedRect: chip, xRadius: 9, yRadius: 9).fill()
         drawText(n, PanelFont.order, PanelColor.chipInk, in: chip, align: .center)
+
+        if let duration {
+            // overlay.scrim capsule with overlay.ink text, bottom left (the order chip is top left, remove top right).
+            let dw = textWidth(duration, PanelFont.overlay) + 12
+            let cap = CGRect(x: 5, y: r.height - 5 - 18, width: dw, height: 18)
+            PanelColor.scrim.setFill()
+            NSBezierPath(roundedRect: cap, xRadius: 9, yRadius: 9).fill()
+            drawText(duration, PanelFont.overlay, PanelColor.overlayInk, in: cap, align: .center)
+        }
 
         PanelColor.edge.setStroke()
         let edge = NSBezierPath(roundedRect: r.insetBy(dx: 0.25, dy: 0.25), xRadius: 7.75, yRadius: 7.75)
@@ -717,6 +728,7 @@ final class PanelView: NSView {
             let tv: ThumbView
             if let existing = thumbs[item.id] { tv = existing } else {
                 tv = ThumbView(id: item.id, path: item.path, number: i + 1)
+                tv.duration = item.duration
                 tv.onRemove = { [weak self] id in self?.onRemove(id) }
                 tv.onReveal = { [weak self] p in self?.onReveal(p) }
                 doc.addSubview(tv)

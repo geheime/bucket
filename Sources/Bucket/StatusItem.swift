@@ -9,6 +9,7 @@ final class StatusController: NSObject, NSMenuDelegate {
     private let bucket: BucketStore
     private let exporter: Exporter
     private let capturer = Capturer()
+    private let recorder: Recorder
     private let companion: Companion
     private let keycaps = KeycapOverlay()
     private let errorPill = ErrorPill()
@@ -22,6 +23,11 @@ final class StatusController: NSObject, NSMenuDelegate {
     private var capturePending = false
     /// The global capture hotkey is let go while the menu tracks (see `menuWillOpen`) and taken back when it closes.
     private var captureSuspended = false
+    /// Same for ⌘⇧6 (id 4), and the same wait: a recording asked with the menu open starts once it is gone.
+    private var recordSuspended = false
+    private var recordPending = false
+    /// ⌘⇧6 is held by another app: the menu says so.
+    private var recordShortcutTaken = false
 
     static let seedPosition = 400
     /// Fixed item width: the 18 pt glyph sits centered, no count text beside it.
@@ -42,7 +48,9 @@ final class StatusController: NSObject, NSMenuDelegate {
         self.exporter = Exporter(library: library)
         self.companion = Companion(count: bucket.count)
         self.panel = PanelController(library: library, bucket: bucket)
+        self.recorder = Recorder(library: library)
         super.init()
+        wireRecorder()
 
         // New items land next to the notch on crowded menu bars. A fixed autosave name lets us
         // seed a position closer to the right edge; the user can still ⌘-drag it afterwards.
@@ -123,8 +131,10 @@ final class StatusController: NSObject, NSMenuDelegate {
         clearShortcutTaken = !Hotkeys.register(id: 3, keyCode: kVK_ANSI_X, modifiers: optionKey | shiftKey) { [weak self] in
             self?.clearFromShortcut()
         }
+        // ⌘⇧6 = record a region / stop. Its own mechanic: ⌘⇧+number captures, ⌥⇧+letter works the bucket.
+        recordShortcutTaken = !registerRecord()
         // One pill, not two: if several failed, the capture one wins (it is the shortcut the app is for); the menu names each.
-        if captureTaken || recopyShortcutTaken || clearShortcutTaken || nativeScreenshotConflict { companion.feedback(CompanionCopy.shortcutTaken) } // the menu keeps saying it
+        if captureTaken || recopyShortcutTaken || clearShortcutTaken || recordShortcutTaken || nativeScreenshotConflict { companion.feedback(CompanionCopy.shortcutTaken) } // the menu keeps saying it
     }
 
     /// Bucket's capture shortcut is Cmd+Shift+4 and the macOS one is still on: Carbon lets us register it, but macOS wins
@@ -148,10 +158,85 @@ final class StatusController: NSObject, NSMenuDelegate {
         if !result.switched { companion.feedback(CompanionCopy.shortcutTaken) }
     }
 
+    // MARK: Recording
+
+    private func registerRecord() -> Bool {
+        Hotkeys.register(id: 4, keyCode: kVK_ANSI_6, modifiers: cmdKey | shiftKey, handler: { [weak self] in self?.toggleRecording() })
+    }
+
+    private func wireRecorder() {
+        recorder.permissionGranted = { CGPreflightScreenCaptureAccess() }
+        recorder.willPick = { [weak self] in
+            // Same law as a photo: every Bucket window is off screen before anything is captured.
+            self?.companion.beginCapture()
+            BucketWindows.hideAll()
+        }
+        recorder.pickerEnded = { [weak self] in BucketWindows.captureEnded(); self?.panel.captureEnded() }
+        recorder.onPhase = { [weak self] in self?.refreshRecordingState() }
+        recorder.finished = { [weak self] outcome in self?.recorded(outcome) }
+    }
+
+    /// Nothing in the bar changes while recording (the pill is the indicator); the menu reads the phase when it opens.
+    private func refreshRecordingState() {}
+
+    @objc func toggleRecording() {
+        // Our own menu open: its tracking owns the mouse, so the picker's first click would be eaten. Close it, start once it is gone.
+        if menuOpen, !recorder.isRecording {
+            menu.cancelTrackingWithoutAnimation()
+            guard !recordPending else { return }
+            recordPending = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.resumeRecording() }
+            return
+        }
+        guard !capturer.isBusy else { return }
+        recorder.toggle()
+    }
+
+    private func resumeRecording() {
+        guard recordPending else { return }
+        recordPending = false
+        menuOpen = false
+        toggleRecording()
+    }
+
+    private func recorded(_ outcome: Recorder.Outcome) {
+        switch outcome {
+        case .cancelled:
+            companion.cancelCapture()
+        case .permissionMissing:
+            NSLog("Bucket: recording failed for lack of Screen Recording")
+            companion.cancelCapture()
+            requestScreenAccess()
+            permissionDenied()
+        case .failed(let message):
+            NSLog("Bucket: recording failed: \(message)")
+            NSSound.beep()
+            companion.cancelCapture()
+            companion.feedback(CompanionCopy.couldNotSave)
+        case .recorded(let shot, let stoppedAtLimit):
+            let before = bucket.count
+            companion.prepare()            // holds the bar icon: the drop has to land first
+            bucket.add(shot)               // one item, however many paths ⌘V pastes
+            NSSound(named: "Pop")?.play()
+            stageBucket()
+            if let limit = stoppedAtLimit {
+                // "Stopped at 2:00" first, then the usual "1 in bucket".
+                companion.feedback(RecordingClock.stoppedAt(limit), count: before)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.7) { [weak self] in
+                    guard let self else { return }
+                    self.companion.absorbed(before: before, after: self.bucket.count)
+                }
+            } else {
+                companion.absorbed(before: before, after: bucket.count)
+            }
+            NSLog("Bucket: recording \(shot.id) \(shot.recording?.frames.count ?? 0) frames, \(shot.recording?.durationLabel ?? "?")")
+        }
+    }
+
     // MARK: Actions
 
     @objc func capture() {
-        guard !capturer.isBusy else { return }
+        guard !capturer.isBusy, !recorder.isActive else { return }
         // Our own menu open: menu tracking owns the mouse (a click outside dismisses it), so screencapture's first click would be
         // eaten and the crosshair would hang. Close it first and start once it is gone. macOS can capture an open menu, we cannot.
         if menuOpen {
@@ -198,6 +283,10 @@ final class StatusController: NSObject, NSMenuDelegate {
             Hotkeys.unregister(id: 1)
             captureSuspended = true
         }
+        if Hotkeys.registered(id: 4) != nil { // ⌘⇧6 behaves the same way: the "Record" item carries the key equivalent
+            Hotkeys.unregister(id: 4)
+            recordSuspended = true
+        }
     }
     func menuDidClose(_ menu: NSMenu) {
         guard menu === self.menu else { return }
@@ -206,6 +295,8 @@ final class StatusController: NSObject, NSMenuDelegate {
             captureSuspended = false
             _ = registerCapture(Shortcut.capture)
         }
+        if recordSuspended { recordSuspended = false; _ = registerRecord() }
+        if recordPending { DispatchQueue.main.async { [weak self] in self?.resumeRecording() } }
         if capturePending { DispatchQueue.main.async { [weak self] in self?.resumeCapture() } } // one turn: the menu window is really gone
     }
 
@@ -356,6 +447,10 @@ final class StatusController: NSObject, NSMenuDelegate {
         }
     }
 
+    @objc func setRecordingLimit(_ sender: NSMenuItem) {
+        if let raw = sender.representedObject as? Int, let l = RecordingLimit(rawValue: raw) { RecordingLimit.set(l) }
+    }
+
     @objc func toggleKeepInMenuBar() { companion.keepInMenuBar.toggle() }
 
     @objc func revealShot(_ sender: NSMenuItem) {
@@ -440,6 +535,16 @@ final class StatusController: NSObject, NSMenuDelegate {
             native.isEnabled = false
             menu.addItem(native)
         }
+        let rec = entry(recorder.isRecording ? "Stop recording" : "Record a region", #selector(toggleRecording))
+        rec.keyEquivalent = "6"
+        rec.keyEquivalentModifierMask = [.command, .shift]
+        rec.isEnabled = !recorder.isActive || recorder.isRecording
+        menu.addItem(rec)
+        if recordShortcutTaken && Hotkeys.registered(id: 4) == nil && !recordSuspended {
+            let taken = NSMenuItem(title: "⌘⇧6 is taken by another app", action: nil, keyEquivalent: "")
+            taken.isEnabled = false
+            menu.addItem(taken)
+        }
         // ⌥⇧V does one of two things (copyBatch): the menu shows it next to the one it would do right now.
         let copy = entry(n > 0 ? "Copy batch (\(n))" : "Copy batch", #selector(copyBatch), key: n > 0 ? "v" : "")
         copy.isEnabled = n > 0
@@ -462,7 +567,8 @@ final class StatusController: NSObject, NSMenuDelegate {
             menu.addItem(NSMenuItem.sectionHeader(title: "In bucket"))
             for (i, shot) in bucket.items.enumerated() {
                 let time = Library.timeLabel(of: shot.id) ?? shot.id
-                let row = NSMenuItem(title: "\(i + 1). \(time) · \(shot.frontApp ?? "—")", action: nil, keyEquivalent: "")
+                let what = shot.recording.map { "Recording \($0.durationLabel)" } ?? (shot.frontApp ?? "—")
+                let row = NSMenuItem(title: "\(i + 1). \(time) · \(what)", action: nil, keyEquivalent: "")
                 row.image = thumbnail(shot.path)
                 let sub = NSMenu()
                 let reveal = entry("Show in Finder", #selector(revealShot(_:)))
@@ -503,6 +609,19 @@ final class StatusController: NSObject, NSMenuDelegate {
         }
         shortcutItem.submenu = shortcuts
         menu.addItem(shortcutItem)
+        let limitItem = NSMenuItem(title: "Recording limit", action: nil, keyEquivalent: "")
+        let limits = NSMenu()
+        for l in RecordingLimit.allCases {
+            let it = entry(l.title, #selector(setRecordingLimit(_:)))
+            it.representedObject = l.rawValue
+            it.state = l == RecordingLimit.current() ? .on : .off
+            limits.addItem(it)
+        }
+        limitItem.submenu = limits
+        menu.addItem(limitItem)
+        let limitHelp = NSMenuItem(title: RecordingLimit.helpLine, action: nil, keyEquivalent: "")
+        limitHelp.isEnabled = false
+        menu.addItem(limitHelp)
         let ocr = entry("Read text in screenshots", #selector(toggleOCR))
         markToggle(ocr, on: OCRSetting.enabled)
         menu.addItem(ocr)
