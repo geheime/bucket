@@ -39,6 +39,8 @@ public enum RecordingLimit: Int, CaseIterable {
 
     /// nil = no limit.
     public var seconds: Int? { self == .none ? nil : rawValue }
+    /// Longest recording the leftover sweep waits for before it treats a raw .mov in the temporary folder as abandoned.
+    public static let hardCapNoLimit = 3600
 
     public static func current(in defaults: UserDefaults = .standard) -> RecordingLimit {
         guard let v = defaults.object(forKey: key) as? Int, let l = RecordingLimit(rawValue: v) else { return standard }

@@ -56,6 +56,7 @@ final class Recorder {
         self.library = library
         pill.onStop = { [weak self] in self?.stop() }
         pill.onCancel = { [weak self] in self?.cancel() }
+        Recorder.sweepLeftovers()
         // Quitting Bucket must not leave a recording nobody can stop.
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
             if let pid = self?.process?.processIdentifier, self?.process?.isRunning == true { kill(pid, SIGINT) }
@@ -63,6 +64,17 @@ final class Recorder {
     }
 
     private func set(_ p: Phase) { phase = p; onPhase() }
+
+    /// Raw recordings a dead Bucket left in the temporary folder (unredacted screen content). Only older than the longest
+    /// possible recording, so another Bucket recording right now is never touched.
+    static func sweepLeftovers() {
+        let fm = FileManager.default, dir = fm.temporaryDirectory
+        let cutoff = Date().addingTimeInterval(-Double(RecordingLimit.hardCapNoLimit + 600))
+        for name in (try? fm.contentsOfDirectory(atPath: dir.path)) ?? [] where name.hasPrefix("bucket-rec-") && name.hasSuffix(".mov") {
+            let url = dir.appendingPathComponent(name)
+            if let m = (try? fm.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date, m < cutoff { try? fm.removeItem(at: url) }
+        }
+    }
 
     // MARK: ⌘⇧6
 
@@ -102,6 +114,7 @@ final class Recorder {
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("bucket-rec-\(UUID().uuidString).mov")
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+        // No -V: with -v -R it broke the recording (hand-test 06/11, no file). A hard cap for a dead Bucket is still owed.
         p.arguments = ["-v", "-R" + RecordingRegion.argument(region), "-k", "-x", file.path]
         let err = Pipe()
         p.standardError = err
@@ -198,6 +211,7 @@ final class Recorder {
             return
         }
         guard let file, size > 0 else {
+            if let file { try? FileManager.default.removeItem(at: file) }
             // The process ended and left no file (or an empty one): with no Screen Recording permission that is exactly what it does.
             NSLog("Bucket: recording ended without a file (status \(status), stderr \"\(stderr.trimmingCharacters(in: .whitespacesAndNewlines))\"): treating it as missing permission")
             reading.close(); set(.idle); finished(.permissionMissing)
@@ -218,7 +232,9 @@ final class Recorder {
                 switch result {
                 case .success(let shot): self.finished(.recorded(shot, stoppedAtLimit: byLimit ? limit : nil))
                 case .failure(let error):
-                    NSLog("Bucket: could not process the recording (\(file.path) is still there): \(error.localizedDescription)")
+                    // The raw video is unredacted screen content: it does not stay behind in the temporary folder.
+                    try? FileManager.default.removeItem(at: file)
+                    NSLog("Bucket: could not process the recording: \(error.localizedDescription)")
                     self.finished(.failed(error.localizedDescription))
                 }
             }
