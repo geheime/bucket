@@ -187,25 +187,16 @@ final class RegionBorder {
     private var scrim: BucketPanel?
     static let room: CGFloat = 4
 
-    /// Window levels while recording, bottom to top: the scrim, then the frame, then the pill. Distinct levels, so what is on top
-    /// never depends on the order the windows were ordered front.
-    static let scrimLevel = NSWindow.Level.statusBar
-    static let borderLevel = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
-    static let pillLevel = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 2)
+    /// Measured (06/11): while `screencapture -v -R` records, it puts its own full-screen window at level 1499 that dims
+    /// everything outside the rect, Bucket's windows included. So there is no scrim of ours while recording (it would dim twice),
+    /// and the frame and the pill sit above that window. Distinct levels, so what is on top never depends on ordering.
+    static let systemDimLevel = 1499
+    static let borderLevel = NSWindow.Level(rawValue: systemDimLevel + 1)
+    static let pillLevel = NSWindow.Level(rawValue: systemDimLevel + 2)
 
-    /// The dimmed screen (outside the region) and the dashed frame. Both are excluded from capture and let the mouse through.
+    /// The dashed frame around the region (the dimming outside it is screencapture's own). Excluded from capture, lets the mouse through.
     func show(region: CGRect, screen: NSScreen) {
         close()
-        let dim = BucketPanel(size: screen.frame.size, ignoresMouse: true)
-        dim.level = RegionBorder.scrimLevel
-        let dimView = RegionCanvas(frame: CGRect(origin: .zero, size: screen.frame.size))
-        dimView.selection = region.offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY)
-        dimView.showsBorder = false
-        dim.contentView = dimView
-        dim.setFrame(screen.frame, display: false)
-        dim.orderFrontRegardless()
-        scrim = dim
-
         let room = RegionBorder.room
         let frame = region.insetBy(dx: -room, dy: -room)
         let panel = BucketPanel(size: frame.size, ignoresMouse: true)
