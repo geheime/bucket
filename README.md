@@ -122,6 +122,26 @@ tells you at launch and in the menu.
 - **Paste format** (menu): bare paths (default and recommended), numbered with prompt, @paths, or one path per line.
 - **Open archive:** opens `~/Bucket` in Finder.
 
+### Recording a region
+
+Cmd+Shift+6 records a region of the screen, so an agent can see what happened and not only how it ended up.
+
+1. Press Cmd+Shift+6 (or **Record a region** in the menu) and drag the region. Esc, or a click without a drag, cancels.
+2. A small pill under the region shows the time. The stop button, or Cmd+Shift+6 again, ends the recording. The
+   cross (✕) throws it away: nothing reaches the bucket. Esc does not cancel while recording, so the app you are
+   recording keeps it.
+3. Bucket picks the frames where the screen changes (at most 12), reads the text in them locally, and the recording
+   lands in the bucket as **one** item.
+
+Cmd+V in a terminal pastes the frames in order and then one `.json` with the video path, the duration, the region and,
+for each frame, its time and the text on screen. Claude Code attaches the frames as images and reads the json. Say
+what you want done in your message: the recording has no audio and Bucket does not describe it. In browsers and apps
+only the frames are pasted, as images.
+
+**Recording limit** (menu): 1, 2 (default), 5 or 10 minutes, or no limit. The last 10 seconds count down, and the
+recording stops by itself at the limit; what was recorded is kept. The video is saved in the archive next to your
+screenshots. Recording needs the same Screen Recording permission as a screenshot.
+
 ### Pasting into apps and the web
 
 Bucket lays out the clipboard for the app in front, and lays it out again when you switch apps:
@@ -172,7 +192,8 @@ if that is where the app is; keep the app in one of those two places.
 ```
 ~/Bucket/
   2026-10-24/            optimized PNG per screenshot (long edge up to 1568 px) + a .json sidecar with OCR text
-  originals/2026-10-24/  the untouched capture; never pasted, kept as backup
+                         a recording: <id>.mov, <id>.json and a folder <id>/ with its frames (640 px wide)
+  originals/2026-10-24/  the untouched capture; never pasted, kept as backup (a recording's frames, full size)
   .state/                what is currently in the bucket
   batches.jsonl          one line per batch that was pasted or re-copied (batch id, screenshot ids, how)
 ```

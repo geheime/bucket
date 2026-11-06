@@ -5,6 +5,20 @@ All notable changes to Bucket are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Screen recording.** Cmd+Shift+6 records a region of the screen. You drag the region on Bucket's own overlay, a
+  small pill under it shows the time and has a stop button and a cross to discard, and Cmd+Shift+6 again stops it.
+  The menu has **Record a region** / **Stop recording**.
+- A recording is **one item** in the bucket. Bucket picks the frames where the screen changes (at most 12, 640 px
+  wide), reads the text in each one locally (on the full-size frame, with the same secret masking as screenshots, and
+  only if **Read text in screenshots** is on) and saves the video in the archive next to your screenshots. Cmd+V in a
+  terminal pastes the frames in order and then a `.json` (video path, duration, region, and for each frame its time,
+  its text and what text appeared). In browsers and apps the frames are pasted as images.
+- **Recording limit** in the menu: 1, 2 (default), 5 or 10 minutes, or no limit. The last 10 seconds count down, the
+  recording stops by itself at the limit and Bucket says "Stopped at 2:00". What was recorded is kept.
+- In the panel, a recording shows its first frame with its duration.
+- No Screen Recording permission: a recording that ends without a file shows the same permission pill as a screenshot.
+
 ### Fixed
 - The menu now warns when the macOS Cmd+Shift+4 is on. The warning never showed: Bucket looked at the wrong system
   setting (macOS keeps this shortcut as entry 30, and it is on until you turn it off). With that shortcut on, macOS
