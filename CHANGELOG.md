@@ -3,6 +3,13 @@
 All notable changes to Bucket are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+- Pasting into apps that take the screenshots as files (T3 Code and other Electron apps) now empties the bucket.
+  Those apps only ask for the file, and Bucket never counted a file request as a paste. Now it counts when Cmd is held
+  down (Cmd+V), except in the first half second after an app comes to the front, when apps read the clipboard on their own.
+
 ## [0.5.0] - 2026-11-06
 
 ### Added

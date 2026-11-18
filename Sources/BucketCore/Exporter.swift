@@ -64,6 +64,17 @@ public enum PasteIntent {
         return !optionDown && secondsSinceClick >= 0 && secondsSinceClick < clickWindow
     }
 
+    /// An app that just came to the front reads the file URL on its own (to validate its Paste menu), and the Cmd that
+    /// brought it there (Cmd+Tab, Cmd+click) can still be down. Within this window a file URL read never counts.
+    public static let activationWindow: TimeInterval = 0.5
+
+    /// A file URL read is how apps like T3 Code (Electron) take a paste: they never ask for the PNG, so ignoring it left the
+    /// bucket full after every paste (log 2026-11-18). It counts only with Cmd down (Cmd+V) and not right after an app
+    /// activated; a click does not count for it, because clicking an app to the front is exactly when the menu-check read comes.
+    public static func countsFileURL(commandDown: Bool, secondsSinceActivation: TimeInterval) -> Bool {
+        commandDown && secondsSinceActivation >= activationWindow
+    }
+
     /// The live state: global modifier flags and the time since the last mouse-up (no permission needed for either).
     public static func current() -> (command: Bool, option: Bool, sinceClick: TimeInterval) {
         let flags = NSEvent.modifierFlags
@@ -73,26 +84,36 @@ public enum PasteIntent {
     }
 }
 
-/// Fires `onPasted` at most once, and only for a request that `PasteIntent` says is a paste. Only text or PNG data counts:
-/// desktop apps read the file URL right after activation, before any paste, to validate their Paste menu.
+/// Fires `onPasted` at most once, and only for a request that `PasteIntent` says is a paste. A file URL read has its own,
+/// stricter rule (`countsFileURL`): desktop apps read it right after activation, before any paste, to validate their Paste menu.
 /// A request that does not count is still served; `onIgnored` fires once so the exporter can put a fresh promise back
 /// (data that was served is cached by the pasteboard, and the real Cmd+V would never ask again).
 private final class PasteGate {
     private let onPasted: () -> Void
     private let intent: () -> (command: Bool, option: Bool, sinceClick: TimeInterval)
+    private let sinceActivation: () -> TimeInterval
     var onIgnored: (() -> Void)?
     private var fired = false
     private var ignoredReported = false
     private let lock = NSLock()
-    init(_ onPasted: @escaping () -> Void, intent: @escaping () -> (command: Bool, option: Bool, sinceClick: TimeInterval) = PasteIntent.current) {
+    init(_ onPasted: @escaping () -> Void,
+         intent: @escaping () -> (command: Bool, option: Bool, sinceClick: TimeInterval) = PasteIntent.current,
+         sinceActivation: @escaping () -> TimeInterval = { .infinity }) {
         self.onPasted = onPasted
         self.intent = intent
+        self.sinceActivation = sinceActivation
     }
     func requested(_ type: NSPasteboard.PasteboardType) {
-        guard type != .fileURL else { return }
         let i = intent()
-        let counts = PasteIntent.counts(commandDown: i.command, optionDown: i.option, secondsSinceClick: i.sinceClick)
-        pasteLog.notice("gate \(counts ? "counted" : "ignored", privacy: .public): cmd \(i.command, privacy: .public) opt \(i.option, privacy: .public) since click \(i.sinceClick, format: .fixed(precision: 2), privacy: .public) s")
+        let counts: Bool
+        if type == .fileURL {
+            let since = sinceActivation()
+            counts = PasteIntent.countsFileURL(commandDown: i.command, secondsSinceActivation: since)
+            pasteLog.notice("gate \(counts ? "counted" : "ignored", privacy: .public) (file url): cmd \(i.command, privacy: .public) since activation \(since, format: .fixed(precision: 2), privacy: .public) s")
+        } else {
+            counts = PasteIntent.counts(commandDown: i.command, optionDown: i.option, secondsSinceClick: i.sinceClick)
+            pasteLog.notice("gate \(counts ? "counted" : "ignored", privacy: .public): cmd \(i.command, privacy: .public) opt \(i.option, privacy: .public) since click \(i.sinceClick, format: .fixed(precision: 2), privacy: .public) s")
+        }
         lock.lock()
         defer { lock.unlock() }
         if counts {
@@ -143,6 +164,13 @@ public final class Exporter {
     private var currentGate: PasteGate?
     /// What the gate reads to tell a paste from an app's own read. Injectable so checks can play both.
     public var pasteIntent: () -> (command: Bool, option: Bool, sinceClick: TimeInterval) = PasteIntent.current
+    /// Seconds since an app last came to the front (see `PasteIntent.countsFileURL`). Injectable for the checks.
+    public lazy var secondsSinceActivation: () -> TimeInterval = { [weak self] in
+        guard let at = self?.lastActivation else { return .infinity }
+        return Date().timeIntervalSince(at)
+    }
+    private var lastActivation: Date?
+    private var activationObserver: NSObjectProtocol?
     private var restageTimes: [Date] = []
     /// At most this many fresh promises per second: if something keeps asking, the loop stops (the bucket stays loaded: fail safe).
     public static let maxRestagesPerSecond = 5
@@ -151,6 +179,14 @@ public final class Exporter {
     public init(library: Library, pasteboard: NSPasteboard = .general) {
         self.library = library
         self.pasteboard = pasteboard
+        activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.lastActivation = Date()
+        }
+    }
+
+    deinit {
+        if let activationObserver { NSWorkspace.shared.notificationCenter.removeObserver(activationObserver) }
     }
 
     /// What a bucket item becomes when pasted: a photo is its png; a recording is its frames in order and then its json
@@ -237,13 +273,14 @@ public final class Exporter {
     }
 
     /// Puts the whole bucket on the clipboard as a promise. `onPasted` fires once, the first time something
-    /// asks for the text or the PNG (normally your ⌘V); asking for the file URL alone does not count.
+    /// asks for the data during a paste (normally your ⌘V). A file URL read counts only with Cmd down and not right after an
+    /// app came to the front (`PasteIntent.countsFileURL`).
     public func stage(_ all: [Shot], mode: PasteMode = .terminal, onPasted: @escaping () -> Void) {
         let shots = Exporter.deliverable(all)
         guard !shots.isEmpty else { return }
         let pb = pasteboard
         pb.clearContents()
-        let gate = PasteGate(onPasted, intent: pasteIntent)
+        let gate = PasteGate(onPasted, intent: pasteIntent, sinceActivation: secondsSinceActivation)
         gate.onIgnored = { [weak self, weak gate] in self?.promiseServedEarly(gate) }
         currentGate = gate
         stagedAll = all; stagedMode = mode; stagedOnPasted = onPasted

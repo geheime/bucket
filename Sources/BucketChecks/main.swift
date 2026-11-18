@@ -1785,7 +1785,7 @@ do {
         check("paste modes: markers on every app item", items.allSatisfy { $0.types.contains(transient) && $0.types.contains(auto) })
     }
     // what counts as pasted
-    for (label, mode, type, counts) in [("fileURL", PasteMode.app, NSPasteboard.PasteboardType.fileURL, false),
+    for (label, mode, type, counts) in [("fileURL", PasteMode.app, NSPasteboard.PasteboardType.fileURL, true),
                                         ("png (app)", .app, .png, true), ("png (browser)", .browser, .png, true),
                                         ("string", .terminal, .string, true)] {
         let (pb, ex) = fresh(); defer { pb.releaseGlobally() }
@@ -1795,16 +1795,44 @@ do {
         spin()
         check("paste modes: a \(label) request \(counts ? "counts as pasted, exactly once" : "does not count as pasted")", fired == (counts ? 1 : 0))
     }
-    do { // a file URL pre-read, then the real png read: still pasted exactly once
+    do { // a file URL pre-read right after the app came to the front (Cmd still down), then the real png read: pasted exactly once
         let (pb, ex) = fresh(); defer { pb.releaseGlobally() }
         var fired = 0
+        var sinceActivation: TimeInterval = 0.1
+        ex.secondsSinceActivation = { sinceActivation }
         ex.stage(batch, mode: .app, onPasted: { fired += 1 })
         for item in pb.pasteboardItems ?? [] { _ = item.data(forType: .fileURL) }
         spin()
         let before = fired
+        sinceActivation = 5
         for item in pb.pasteboardItems ?? [] { _ = item.data(forType: .png) }
         spin()
-        check("paste modes: pre-read of file urls does not consume the paste signal", before == 0 && fired == 1)
+        check("paste modes: pre-read of file urls on activation does not consume the paste signal", before == 0 && fired == 1)
+    }
+    do { // T3 Code (Electron) takes a paste as file URLs only: an activation read, then the real Cmd+V a while later
+        let (pb, ex) = fresh(); defer { pb.releaseGlobally() }
+        var fired = 0
+        var sinceActivation: TimeInterval = 0.1
+        ex.secondsSinceActivation = { sinceActivation }
+        ex.stage(batch, mode: .app, onPasted: { fired += 1 })
+        let changeBefore = pb.changeCount
+        for item in pb.pasteboardItems ?? [] { _ = item.data(forType: .fileURL) }
+        spin()
+        check("paste modes: a file url read on activation is ignored and a fresh promise goes back",
+              fired == 0 && pb.changeCount > changeBefore && ex.isStaged)
+        sinceActivation = 5
+        for item in pb.pasteboardItems ?? [] { _ = item.data(forType: .fileURL) }
+        spin()
+        check("paste modes: Cmd+V that reads only file urls counts as pasted, once", fired == 1)
+    }
+    do { // a file URL read without Cmd (a click, an app's own read) never counts
+        let (pb, ex) = fresh(); defer { pb.releaseGlobally() }
+        ex.pasteIntent = { (false, false, 0.2) }
+        var fired = 0
+        ex.stage(batch, mode: .app, onPasted: { fired += 1 })
+        for item in pb.pasteboardItems ?? [] { _ = item.data(forType: .fileURL) }
+        spin()
+        check("paste modes: a file url read after a click, without Cmd, does not count", fired == 0)
     }
     // eager copy is mode-aware and writes data now
     do {
@@ -2304,6 +2332,10 @@ do {
     check("intent: the click window is 1.5 s", I.counts(commandDown: false, optionDown: false, secondsSinceClick: 1.49) && !I.counts(commandDown: false, optionDown: false, secondsSinceClick: 1.5))
     check("intent: a recent click with Option down does not count", !I.counts(commandDown: false, optionDown: true, secondsSinceClick: 0.2))
     check("intent: a negative or broken time does not count", !I.counts(commandDown: false, optionDown: false, secondsSinceClick: -1))
+    check("intent: a file url read with Cmd down counts (Cmd+V into T3 Code)", I.countsFileURL(commandDown: true, secondsSinceActivation: 3))
+    check("intent: a file url read right after an activation does not count, even with Cmd down",
+          !I.countsFileURL(commandDown: true, secondsSinceActivation: 0.2) && I.countsFileURL(commandDown: true, secondsSinceActivation: I.activationWindow))
+    check("intent: a file url read without Cmd does not count", !I.countsFileURL(commandDown: false, secondsSinceActivation: .infinity))
 
     // An ignored request is served, and a fresh promise goes back so the real paste still asks.
     let root = tempDir(), lib = Library(root: root)
