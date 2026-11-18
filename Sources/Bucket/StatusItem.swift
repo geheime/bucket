@@ -79,6 +79,8 @@ final class StatusController: NSObject, NSMenuDelegate {
         item.button?.target = self
         item.button?.action = #selector(statusClicked(_:))
         item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        exporter.onCopiedText = { [weak self] in self?.copiedTextJoined() }
+        exporter.onTextReturned = { [weak self] in self?.copiedTextReturned() }
         bucket.onChange = { [weak self] in
             guard let self else { return }
             self.panel.refresh()
@@ -385,6 +387,32 @@ final class StatusController: NSObject, NSMenuDelegate {
         }
     }
 
+    /// "Paste copied text with the bucket" is on and you copied text while the bucket was waiting on the clipboard: the
+    /// bucket goes back on it with the text, and the companion says how it will be pasted in the app in front.
+    private func copiedTextJoined() {
+        guard bucket.count > 0 else { return }
+        stageBucket()
+        companion.feedback(pasteMode == .terminal ? CompanionCopy.textAdded : CompanionCopy.textAfter, count: bucket.count)
+    }
+
+    /// The screenshots were pasted in a browser or an app and the copied text is on the clipboard again. Said once
+    /// "Pasted N" has been read, so the two do not step on each other.
+    private func copiedTextReturned() {
+        let wait = max(0, Motion.Release.exit.end / 1000 - Exporter.textReturnDelay) + 0.1
+        DispatchQueue.main.asyncAfter(deadline: .now() + wait) { [weak self] in
+            guard let self else { return }
+            self.companion.feedback(CompanionCopy.textReady, count: self.bucket.count)
+        }
+    }
+
+    /// On: a bucket that is already waiting starts watching the clipboard. Off: text that was travelling with the bucket
+    /// goes back on the clipboard as the plain copy it was.
+    @objc func toggleCopiedText() {
+        let on = !CopiedTextSetting.enabled
+        CopiedTextSetting.enabled = on
+        if !on { exporter.releaseCopiedText() } else if bucket.count > 0 && exporter.isStaged { stageBucket() }
+    }
+
     /// ⌥⇧V and "Copy batch": with load it copies now (the bucket empties, as before); with an empty bucket it re-copies.
     @objc func copyBatch() {
         guard bucket.count > 0 else {
@@ -626,6 +654,12 @@ final class StatusController: NSObject, NSMenuDelegate {
         let ocr = entry("Read text in screenshots", #selector(toggleOCR))
         markToggle(ocr, on: OCRSetting.enabled)
         menu.addItem(ocr)
+        let copied = entry(CopiedTextSetting.menuTitle, #selector(toggleCopiedText))
+        markToggle(copied, on: CopiedTextSetting.enabled)
+        menu.addItem(copied)
+        let copiedHelp = NSMenuItem(title: CopiedTextSetting.helpLine, action: nil, keyEquivalent: "")
+        copiedHelp.isEnabled = false
+        menu.addItem(copiedHelp)
         // Shown as the positive: on = the companion follows the cursor (the stored preference is still keepInMenuBar, inverted).
         let keep = entry("Follow the cursor", #selector(toggleKeepInMenuBar))
         markToggle(keep, on: !companion.keepInMenuBar)

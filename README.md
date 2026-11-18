@@ -164,6 +164,26 @@ Bucket never overwrites it.
 The last batch you copied or pasted keeps following the app you switch to, so you can paste the same screenshots
 in a terminal and then in a chat app, for as long as nothing else has replaced the clipboard.
 
+### Copying text while the bucket is loaded
+
+If you take screenshots and then copy some text before you paste, Cmd+V pastes the text: your copy replaced the bucket
+on the clipboard, and the screenshots keep waiting (Opt+Shift+V puts them back).
+
+**Paste copied text with the bucket** (menu, off by default) changes that. With it on, text you copy while the
+bucket is waiting travels with it:
+
+- **Terminals:** one Cmd+V pastes the paths and then your text.
+- **Browsers and other apps:** the first Cmd+V pastes the screenshots, and then your text is back on the clipboard
+  for a second Cmd+V. Those apps cannot take images and text in one paste.
+
+The companion says which one it will be when you copy ("Text added" or "Text pastes after"), and "Text ready to
+paste" once the text is back. Only the last text you copied travels. An image or a file you copy still replaces the
+bucket, as before, and so does anything a password manager marks as secret: Bucket does not read those. If you clear
+the bucket, the text stays on the clipboard. Opt+Shift+V still copies the screenshots only.
+
+Keep it off if you often copy things that have nothing to do with the screenshots: with it on, whatever text you copy
+while the bucket is loaded is pasted with them.
+
 Tested in iTerm2 with Claude Code, the Claude and ChatGPT desktop apps, claude.ai and chatgpt.com in Safari, and Notes.
 The other terminals and browsers are listed by bundle id and expected to behave the same; they have not been tested.
 
@@ -243,7 +263,10 @@ unless you move it into a synced folder.
 everything with `rm -rf ~/Bucket` (this is permanent and also removes the originals).
 
 **Permissions.** Bucket asks for Screen Recording only. It does not ask for Accessibility or Input Monitoring, does
-not read your keystrokes (the shortcuts use the system hotkey API) and does not use the network. You can check the
+not read your keystrokes (the shortcuts use the system hotkey API) and does not use the network. It does not read
+what you copy either, unless you turn on **Paste copied text with the bucket**: then it reads the plain text you copy
+while the bucket is waiting on the clipboard, keeps it in memory until that paste, and never writes it to disk or to
+the log. Copies marked as secret by their app (password managers) are skipped. You can check the
 last part yourself: `otool -L Bucket.app/Contents/MacOS/Bucket` lists system frameworks only, and the source is short.
 
 **It does not change your system.** Bucket does not edit macOS settings. You turn off the native Cmd+Shift+4

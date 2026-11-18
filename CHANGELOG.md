@@ -5,6 +5,15 @@ All notable changes to Bucket are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Paste copied text with the bucket** (menu, off by default). Until now, text you copied after taking screenshots
+  replaced the bucket on the clipboard, and Cmd+V pasted only the text. With the switch on, that text travels with the
+  bucket: in a terminal one Cmd+V pastes the paths and then the text; in browsers and apps the first Cmd+V pastes the
+  screenshots and the text is back on the clipboard for a second one. The companion says which ("Text added", "Text
+  pastes after", "Text ready to paste"). Images, files and anything a password manager marks as secret are not read
+  and still replace the bucket. The text is kept in memory only. With the switch off Bucket does not look at what you
+  copy, as before.
+
 ### Fixed
 - Pasting into apps that take the screenshots as files (T3 Code and other Electron apps) now empties the bucket.
   Those apps only ask for the file, and Bucket never counted a file request as a paste. Now it counts when Cmd is held
