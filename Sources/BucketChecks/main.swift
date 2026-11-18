@@ -1784,6 +1784,10 @@ do {
               items.map { $0.string(forType: .fileURL) } == batch.map { URL(fileURLWithPath: $0.path).absoluteString })
         check("paste modes: markers on every app item", items.allSatisfy { $0.types.contains(transient) && $0.types.contains(auto) })
     }
+    // a promise that offers a file url stays on this Mac: macOS reads a promised file url ahead for Universal Clipboard,
+    // and that read would use up the paste signal of apps that only ask for the file
+    check("paste modes: only the promise that offers a file url stays on this Mac",
+          Exporter.staysOnThisMac(.app) && !Exporter.staysOnThisMac(.terminal) && !Exporter.staysOnThisMac(.browser))
     // what counts as pasted
     for (label, mode, type, counts) in [("fileURL", PasteMode.app, NSPasteboard.PasteboardType.fileURL, true),
                                         ("png (app)", .app, .png, true), ("png (browser)", .browser, .png, true),

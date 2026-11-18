@@ -9,6 +9,9 @@ All notable changes to Bucket are documented here. The format follows
 - Pasting into apps that take the screenshots as files (T3 Code and other Electron apps) now empties the bucket.
   Those apps only ask for the file, and Bucket never counted a file request as a paste. Now it counts when Cmd is held
   down (Cmd+V), except in the first half second after an app comes to the front, when apps read the clipboard on their own.
+  For this to work, a bucket that is waiting on the clipboard for one of those apps stays on this Mac (no Universal
+  Clipboard): macOS read the file ahead of time to have it ready for your other devices, and that early read used up
+  the paste. In terminals and browsers, and for anything you copy by hand, nothing changes.
 
 ## [0.5.0] - 2026-11-06
 
