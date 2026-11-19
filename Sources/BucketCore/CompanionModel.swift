@@ -6,6 +6,12 @@ public enum CompanionCopy {
     public static func pasted(_ n: Int) -> String { "Pasted \(n)" }
     public static func recopied(_ n: Int) -> String { "Re-copied \(n)" }
     public static func copied(_ n: Int) -> String { "Copied \(n)" }
+    /// "Paste copied text with the bucket": the text you just copied will be pasted with the screenshots (terminal)...
+    public static let textAdded = "Text added"
+    /// ...or after them, in a second paste (browsers and apps cannot take both in one).
+    public static let textAfter = "Text pastes after"
+    /// The screenshots were pasted and your text is on the clipboard again.
+    public static let textReady = "Text ready to paste"
     public static let sentToDesktop = "Sent to Desktop"
     public static let couldNotSend = "Could not send"
     public static let captureFailed = "Capture failed"

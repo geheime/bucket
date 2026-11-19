@@ -1874,6 +1874,161 @@ do {
             check("paste modes: a path with a newline is not staged in \(mode)", (pb.pasteboardItems ?? []).isEmpty)
         }
     }
+
+    // copied text · "Paste copied text with the bucket": text copied while the bucket waits on the clipboard travels with it
+    func userCopies(_ pb: NSPasteboard, _ text: String?, extra: [NSPasteboard.PasteboardType: Data] = [:]) {
+        pb.clearContents()
+        let item = NSPasteboardItem()
+        if let text { item.setString(text, forType: .string) }
+        for (type, data) in extra { item.setData(data, forType: type) }
+        pb.writeObjects([item])
+    }
+    /// An exporter with the switch on that stages `batch` again whenever copied text joins, as the app does.
+    func joining(_ mode: PasteMode, onPasted: @escaping () -> Void = {}) -> (NSPasteboard, Exporter) {
+        let (pb, ex) = fresh()
+        ex.copiedTextJoins = { true }
+        ex.onCopiedText = { [unowned ex] in ex.stage(batch, mode: mode, onPasted: onPasted) }
+        ex.stage(batch, mode: mode, onPasted: onPasted)
+        return (pb, ex)
+    }
+    do { // the switch: off unless the user turned it on
+        let suite = "bucket-check-copied-\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!; defer { defaults.removePersistentDomain(forName: suite) }
+        let before = CopiedTextSetting.isEnabled(in: defaults)
+        CopiedTextSetting.set(true, in: defaults)
+        check("copied text: the switch is off by default and remembers being turned on", !before && CopiedTextSetting.isEnabled(in: defaults))
+    }
+    do { // off: the copy wins, exactly as before, and nothing is read
+        let (pb, ex) = fresh(); defer { pb.releaseGlobally() }
+        ex.copiedTextJoins = { false }
+        var fired = 0, joined = 0
+        ex.onCopiedText = { joined += 1 }
+        ex.stage(batch, mode: .terminal, onPasted: { fired += 1 })
+        check("copied text: with the switch off the clipboard is not watched", !ex.isWatchingClipboard)
+        userCopies(pb, "mine")
+        let change = pb.changeCount
+        ex.checkClipboard()
+        spin()
+        check("copied text: with the switch off a copy stays as it is and the bucket keeps waiting",
+              pb.changeCount == change && pb.string(forType: .string) == "mine" && !ex.isStaged && ex.copiedText == nil && joined == 0 && fired == 0)
+    }
+    do { // terminal: one paste, the paths and then the text
+        var fired = 0
+        let (pb, ex) = joining(.terminal, onPasted: { fired += 1 }); defer { pb.releaseGlobally() }
+        check("copied text: with the switch on a waiting bucket watches the clipboard", ex.isWatchingClipboard)
+        ex.checkClipboard()
+        check("copied text: nothing happens while the clipboard is still the bucket", ex.copiedText == nil && ex.isStaged)
+        userCopies(pb, "what is this error?")
+        ex.checkClipboard()
+        check("copied text: text copied while the bucket waits is taken and the bucket goes back on the clipboard",
+              ex.isStaged && ex.copiedText?.string == "what is this error?" && ex.isWatchingClipboard && fired == 0)
+        let pasted = pb.string(forType: .string)
+        spin()
+        check("copied text: a terminal pastes the paths and then the text, in one paste",
+              pasted == Exporter.render(batch, format: .current) + "what is this error?" && fired == 1)
+        check("copied text: once pasted the text is done and the clipboard is no longer watched", ex.copiedText == nil && !ex.isWatchingClipboard)
+    }
+    do { // the last copy is the one that travels; a capture in between keeps it
+        let (pb, ex) = joining(.terminal); defer { pb.releaseGlobally() }
+        userCopies(pb, "one"); ex.checkClipboard()
+        userCopies(pb, "two"); ex.checkClipboard()
+        ex.stage(batch + [c], mode: .terminal, onPasted: {}) // another capture re-stages the bucket
+        check("copied text: the last text copied is the one that travels, also after another capture",
+              pb.string(forType: .string) == Exporter.render(batch + [c], format: .current) + "two")
+    }
+    do { // browser and app: the screenshots first, then the text is back on the clipboard as it was copied
+        for mode in [PasteMode.app, .browser] {
+            var fired = 0, returned = 0
+            let (pb, ex) = joining(mode, onPasted: { fired += 1 }); defer { pb.releaseGlobally() }
+            ex.onTextReturned = { returned += 1 }
+            let rtf = Data("{\\rtf1 hi}".utf8)
+            userCopies(pb, "hi", extra: [.rtf: rtf])
+            ex.checkClipboard()
+            let items = pb.pasteboardItems ?? []
+            check("copied text: in \(mode) mode the clipboard still offers the screenshots only",
+                  items.count == 3 && items.allSatisfy { $0.types.contains(.png) && !$0.types.contains(.string) })
+            for item in items { _ = item.data(forType: mode == .app ? .fileURL : .png) }
+            spin()
+            check("copied text: in \(mode) mode the paste counts and the text waits for its requests to stop",
+                  fired == 1 && returned == 0 && pb.pasteboardItems?.count == 3)
+            RunLoop.main.run(until: Date().addingTimeInterval(Exporter.textReturnDelay + 0.2))
+            check("copied text: in \(mode) mode the text is back on the clipboard after the paste, as it was copied",
+                  returned == 1 && pb.pasteboardItems?.count == 1 && pb.string(forType: .string) == "hi" && pb.data(forType: .rtf) == rtf
+                  && !ex.isStaged && ex.copiedText == nil)
+            check("copied text: the returned text is not replaced when the front app changes", !ex.relayout(mode: .terminal) && pb.string(forType: .string) == "hi")
+        }
+    }
+    do { // something copied between the paste and the return is never replaced
+        let (pb, ex) = joining(.app); defer { pb.releaseGlobally() }
+        var returned = 0
+        ex.onTextReturned = { returned += 1 }
+        userCopies(pb, "hi"); ex.checkClipboard()
+        for item in pb.pasteboardItems ?? [] { _ = item.data(forType: .fileURL) }
+        spin()
+        userCopies(pb, "newer")
+        RunLoop.main.run(until: Date().addingTimeInterval(Exporter.textReturnDelay + 0.2))
+        check("copied text: a copy made right after the paste is not replaced by the returning text", returned == 0 && pb.string(forType: .string) == "newer")
+    }
+    do { // never read: secrets, generated content, images, files, very long text. That copy wins, as before
+        let concealed = NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")
+        let cases: [(String, String?, [NSPasteboard.PasteboardType: Data])] = [
+            ("a password manager's copy", "hunter2", [concealed: Data()]),
+            ("a copy marked transient", "x", [transient: Data()]),
+            ("a copy marked auto-generated", "x", [auto: Data()]),
+            ("an image", nil, [.png: Data([0x89, 0x50, 0x4E, 0x47])]),
+            ("an image that comes with text", "alt text", [.png: Data([0x89, 0x50, 0x4E, 0x47])]),
+            ("a file", "name.png", [.fileURL: Data(URL(fileURLWithPath: a.path).absoluteString.utf8)]),
+            ("empty text", "", [:]),
+            ("very long text", String(repeating: "x", count: CopiedText.maxLength + 1), [:]),
+        ]
+        for (label, text, extra) in cases {
+            let (pb, ex) = joining(.terminal); defer { pb.releaseGlobally() }
+            userCopies(pb, text, extra: extra)
+            let change = pb.changeCount
+            ex.checkClipboard()
+            check("copied text: \(label) does not join and stays as it was copied",
+                  pb.changeCount == change && !ex.isStaged && ex.copiedText == nil && !ex.isWatchingClipboard)
+        }
+        let (pb, ex) = joining(.terminal); defer { pb.releaseGlobally() }
+        userCopies(pb, "note"); ex.checkClipboard()
+        userCopies(pb, nil, extra: [.png: Data([0x89, 0x50, 0x4E, 0x47])]); ex.checkClipboard()
+        check("copied text: an image copied after a text replaces both, and the text is forgotten",
+              ex.copiedText == nil && !ex.isStaged && pb.string(forType: .string) == nil)
+    }
+    do { // the text is never lost when the bucket leaves the clipboard without a paste
+        let (pb, ex) = joining(.terminal); defer { pb.releaseGlobally() }
+        userCopies(pb, "keep me"); ex.checkClipboard()
+        ex.unstage() // the bucket was cleared
+        check("copied text: clearing the bucket leaves the copied text on the clipboard",
+              pb.string(forType: .string) == "keep me" && !ex.isStaged && ex.copiedText == nil && !ex.isWatchingClipboard)
+        let (pb2, ex2) = joining(.app); defer { pb2.releaseGlobally() }
+        userCopies(pb2, "keep me too"); ex2.checkClipboard()
+        ex2.releaseCopiedText() // the switch was turned off
+        check("copied text: turning the switch off leaves the copied text on the clipboard",
+              pb2.string(forType: .string) == "keep me too" && !ex2.isStaged && ex2.copiedText == nil && !ex2.isWatchingClipboard)
+        let (pb3, ex3) = joining(.terminal); defer { pb3.releaseGlobally() }
+        userCopies(pb3, "dropped"); ex3.checkClipboard()
+        ex3.copy(batch, mode: .terminal) // Copy batch
+        check("copied text: Copy batch is the screenshots only, as before",
+              pb3.string(forType: .string) == Exporter.render(batch, format: .current) && ex3.copiedText == nil)
+    }
+    do { // the bucket emptied between the copy and the look: nothing is staged and the copy is not touched
+        let (pb, ex) = fresh(); defer { pb.releaseGlobally() }
+        ex.copiedTextJoins = { true }
+        ex.onCopiedText = {} // the app has nothing to stage
+        ex.stage(batch, mode: .terminal, onPasted: {})
+        userCopies(pb, "alone")
+        let change = pb.changeCount
+        ex.checkClipboard()
+        check("copied text: with nothing to stage the copy stays and no text is kept",
+              pb.changeCount == change && pb.string(forType: .string) == "alone" && ex.copiedText == nil)
+    }
+    do { // the timer does the looking by itself
+        let (pb, ex) = joining(.terminal); defer { pb.releaseGlobally() }
+        userCopies(pb, "seen by the timer")
+        RunLoop.main.run(until: Date().addingTimeInterval(Exporter.clipboardPollInterval * 2 + 0.2))
+        check("copied text: the watch notices a copy by itself", ex.copiedText?.string == "seen by the timer" && ex.isStaged)
+    }
 }
 
 // relayout · the last batch on the clipboard follows the front app while the clipboard is still ours
